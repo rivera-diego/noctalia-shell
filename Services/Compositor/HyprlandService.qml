@@ -525,16 +525,38 @@ Item {
   }
 
   // Public functions
+
+  // Ejecuta dispatches Lua sin mover el cursor (atómico via hyprctl eval)
+  function evalLuaNoWarp(luaDispatches) {
+    const block = `hl.config({ cursor = { no_warps = true } }); ${luaDispatches}; hl.config({ cursor = { no_warps = false } })`;
+    Quickshell.execDetached(["hyprctl", "eval", block]);
+  }
+
   function switchToWorkspace(workspace) {
     try {
-      // Hyprland 0.55+ Lua API: use hl.dsp.focus({workspace=...})
+      let focusExpr;
       if (workspace.name) {
-        Hyprland.dispatch(`hl.dsp.focus({workspace="name:${workspace.name}"})`);
-        return;
+        focusExpr = `hl.dispatch(hl.dsp.focus({ workspace = "name:${workspace.name}" }))`;
+      } else {
+        focusExpr = `hl.dispatch(hl.dsp.focus({ workspace = "${workspace.idx}" }))`;
       }
-      Hyprland.dispatch(`hl.dsp.focus({workspace=${workspace.idx}})`);
+      evalLuaNoWarp(focusExpr);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to switch workspace:", e);
+    }
+  }
+
+  function scrollWorkspaceContent(direction) {
+    try {
+      let luaBlock;
+      if (direction < 0) {
+        luaBlock = 'hl.dispatch(hl.dsp.layout("focus r")); hl.dispatch(hl.dsp.layout("focus d"))';
+      } else {
+        luaBlock = 'hl.dispatch(hl.dsp.layout("focus l")); hl.dispatch(hl.dsp.layout("focus u"))';
+      }
+      evalLuaNoWarp(luaBlock);
+    } catch (e) {
+      Logger.e("HyprlandService", "Failed to scroll workspace content:", e);
     }
   }
 
@@ -545,10 +567,12 @@ Item {
         return;
       }
 
-      // Hyprland 0.55+ Lua API: hl.dsp.focus({window=...})
       const windowId = window.id.toString();
-      Hyprland.dispatch(`hl.dsp.focus({window="address:0x${windowId}"})`);
-      Hyprland.dispatch(`hl.dsp.window.alter_zorder({mode="top", window="address:0x${windowId}"})`); // Bring the focused window to the top (essential for Float Mode)
+      const luaBlock = [
+        `hl.dispatch(hl.dsp.focus({ window = "address:0x${windowId}" }))`,
+        `hl.dispatch(hl.dsp.window.alter_zorder({ mode = "top", window = "address:0x${windowId}" }))`
+      ].join("; ");
+      evalLuaNoWarp(luaBlock);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to switch window:", e);
     }
