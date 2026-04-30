@@ -527,11 +527,12 @@ Item {
   // Public functions
   function switchToWorkspace(workspace) {
     try {
+      // Hyprland 0.55+ Lua API: use hl.dsp.focus({workspace=...})
       if (workspace.name) {
-        Hyprland.dispatch(`workspace ${workspace.name}`);
+        Hyprland.dispatch(`hl.dsp.focus({workspace="name:${workspace.name}"})`);
         return;
       }
-      Hyprland.dispatch(`workspace ${workspace.idx}`);
+      Hyprland.dispatch(`hl.dsp.focus({workspace=${workspace.idx}})`);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to switch workspace:", e);
     }
@@ -544,9 +545,10 @@ Item {
         return;
       }
 
+      // Hyprland 0.55+ Lua API: hl.dsp.focus({window=...})
       const windowId = window.id.toString();
-      Hyprland.dispatch(`focuswindow address:0x${windowId}`);
-      Hyprland.dispatch(`alterzorder top,address:0x${windowId}`); // Bring the focused window to the top (essential for Float Mode)
+      Hyprland.dispatch(`hl.dsp.focus({window="address:0x${windowId}"})`);
+      Hyprland.dispatch(`hl.dsp.window.alter_zorder({mode="top", window="address:0x${windowId}"})`); // Bring the focused window to the top (essential for Float Mode)
     } catch (e) {
       Logger.e("HyprlandService", "Failed to switch window:", e);
     }
@@ -554,7 +556,8 @@ Item {
 
   function closeWindow(window) {
     try {
-      Hyprland.dispatch(`killwindow address:0x${window.id}`);
+      // Hyprland 0.55+ Lua API: hl.dsp.window.kill({window=...})
+      Hyprland.dispatch(`hl.dsp.window.kill({window="address:0x${window.id}"})`);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to close window:", e);
     }
@@ -562,7 +565,8 @@ Item {
 
   function turnOffMonitors() {
     try {
-      Quickshell.execDetached(["hyprctl", "dispatch", "dpms", "off"]);
+      // Hyprland 0.55+ Lua API: hl.dsp.dpms({action="disable"})
+      Quickshell.execDetached(["hyprctl", "dispatch", 'hl.dsp.dpms({action="disable"})']);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to turn off monitors:", e);
     }
@@ -570,7 +574,8 @@ Item {
 
   function turnOnMonitors() {
     try {
-      Quickshell.execDetached(["hyprctl", "dispatch", "dpms", "on"]);
+      // Hyprland 0.55+ Lua API: hl.dsp.dpms({action="enable"})
+      Quickshell.execDetached(["hyprctl", "dispatch", 'hl.dsp.dpms({action="enable"})']);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to turn on monitors:", e);
     }
@@ -578,7 +583,8 @@ Item {
 
   function logout() {
     try {
-      Quickshell.execDetached(["hyprctl", "dispatch", "exit"]);
+      // Hyprland 0.55+ Lua API: hl.dsp.exit()
+      Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.exit()"]);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to logout:", e);
     }
@@ -607,7 +613,10 @@ Item {
 
   function spawn(command) {
     try {
-      Quickshell.execDetached(["hyprctl", "dispatch", "--", "exec"].concat(command));
+      // Hyprland 0.55+ removed the old "exec" dispatcher string syntax.
+      // Use Quickshell.execDetached directly — apps launch correctly without
+      // going through hyprctl, and Hyprland tracks them via the Wayland protocol.
+      Quickshell.execDetached(command);
     } catch (e) {
       Logger.e("HyprlandService", "Failed to spawn command:", e);
     }
