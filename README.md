@@ -1,4 +1,4 @@
-# Noctalia Shell
+# Better Noctalia Shell
 
 **_quiet by design_**
 
@@ -37,7 +37,7 @@
 
 ## 🔀 Fork Changes
 
-> This is a personal fork of [noctalia-dev/noctalia-shell](https://github.com/noctalia-dev/noctalia-shell) with the following modifications on top of the latest upstream `main`.
+> Welcome to **Better Noctalia Shell**, a personal fork of [noctalia-dev/noctalia-shell](https://github.com/noctalia-dev/noctalia-shell) with the following modifications on top of the latest upstream `main`.
 
 ### Hyprland 0.55+ Lua API Migration
 
