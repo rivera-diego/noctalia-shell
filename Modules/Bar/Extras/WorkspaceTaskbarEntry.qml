@@ -35,7 +35,7 @@ Item {
   readonly property bool isFocused: window ? (window.isFocused || false) : false
 
   readonly property real entryW: showTitle && !isVertical
-    ? root.baseItemSize + Style.marginS + root.titleWidth
+    ? root.baseItemSize + Style.marginS + root.titleWidth + Style.margin2M
     : root.baseItemSize
   readonly property real entryH: isVertical ? root.baseItemSize : root.capsuleHeight
 

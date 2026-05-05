@@ -86,7 +86,7 @@ Item {
   readonly property real entryHeight: isVertical ? baseItemSize : capsuleHeight
 
   // Group outer size
-  readonly property int innerPad: Style.marginXS
+  readonly property int innerPad: Style.marginM
   readonly property int totalEntries: liveWindows.length + livePinnedApps.length
   readonly property real groupInnerW: isVertical
     ? (hasWindows ? entryWidth : baseItemSize) + innerPad * 2

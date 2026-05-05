@@ -377,7 +377,7 @@ Item {
     width: root.contentWidth
     height: root.contentHeight
     radius: Style.radiusM
-    color: Style.capsuleColor
+    color: "transparent"
     border.color: Style.capsuleBorderColor
     border.width: Style.capsuleBorderWidth
 
