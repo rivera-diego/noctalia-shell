@@ -117,7 +117,7 @@ Item {
           }
           family: Settings.data.ui.fontFixed
           // Size based on the fixed dimension (cross-axis) of the visual pill
-          pointSize: (isVertical ? pillContainer.pillWidth : pillContainer.pillHeight) * textRatio
+          pointSize: (isVertical ? pillContainer.pillWidth*0.8 : pillContainer.pillHeight) * textRatio*1.4
           applyUiScale: false
           font.capitalization: Font.AllUppercase
           font.weight: fontWeight

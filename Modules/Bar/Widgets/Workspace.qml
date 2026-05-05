@@ -86,9 +86,9 @@ Item {
   readonly property bool showBadge: (widgetSettings.showBadge !== undefined) ? widgetSettings.showBadge : widgetMetadata.showBadge
 
   // Only for grouped mode / show apps
-  readonly property int baseItemSize: Style.toOdd(capsuleHeight * 0.8)
+  readonly property int baseItemSize: Style.toOdd(capsuleHeight * 1.2)
   readonly property int iconSize: Style.toOdd(baseItemSize * iconScale)
-  readonly property real textRatio: 0.50
+  readonly property real textRatio: 0.4
 
   // Context menu state for grouped mode - store IDs instead of object references to avoid stale references
   property string selectedWindowId: ""
@@ -588,7 +588,7 @@ Item {
           direction *= -1;
         // For vertical layout, natural mapping: wheel up -> previous, down -> next (already handled by sign)
         // For horizontal layout, same mapping using vertical wheel
-        root.switchByOffset(direction);
+        CompositorService.scrollWorkspaceContent(direction);
         root.wheelCooldown = true;
         wheelDebounce.restart();
         root.wheelAccumulatedDelta = 0;
@@ -724,7 +724,7 @@ Item {
 
       width: Style.toOdd((hasWindows ? groupedIconsFlow.implicitWidth : root.iconSize) + (root.isVertical ? (root.baseItemSize - root.iconSize + Style.marginXS) : Style.marginXL))
       height: Style.toOdd((hasWindows ? groupedIconsFlow.implicitHeight : root.iconSize) + (root.isVertical ? Style.marginL : (root.baseItemSize - root.iconSize + Style.marginXS)))
-      color: Style.capsuleColor
+      color: "transparent"
       radius: Style.radiusS
       border.color: Settings.data.bar.showOutline ? Style.capsuleBorderColor : Qt.alpha((workspaceModel.isFocused ? Color.mPrimary : (groupHoverHandler.hovered ? Color.mHover : Color.mOutline)), root.groupedBorderOpacity)
       border.width: Style.borderS
@@ -865,8 +865,8 @@ Item {
         anchors {
           left: parent.left
           top: parent.top
-          leftMargin: -Style.fontSizeXS * 0.55
-          topMargin: -Style.fontSizeXS * 0.25
+          leftMargin: Style.fontSizeXS * 0.3
+          topMargin: Style.fontSizeXS * 0.3
         }
 
         width: Math.max(groupedWorkspaceNumber.implicitWidth + Style.margin2XS, Style.fontSizeXXS * 2)
@@ -889,7 +889,7 @@ Item {
             return Color.resolveColorKey(root.emptyColor);
           }
 
-          scale: groupedContainer.workspaceModel.isActive ? 1.0 : 0.8
+          scale: groupedContainer.workspaceModel.isActive ? 1.0 : 0.9
 
           Behavior on scale {
             NumberAnimation {
@@ -941,7 +941,7 @@ Item {
 
           family: Settings.data.ui.fontFixed
           font {
-            pointSize: barFontSize * 0.75
+            pointSize: barFontSize * 0.7
             weight: fontWeight
             capitalization: Font.AllUppercase
           }

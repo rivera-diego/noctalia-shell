@@ -35,6 +35,60 @@
 
 ---
 
+## 🔀 Fork Changes
+
+> This is a personal fork of [noctalia-dev/noctalia-shell](https://github.com/noctalia-dev/noctalia-shell) with the following modifications on top of the latest upstream `main`.
+
+### Hyprland 0.55+ Lua API Migration
+
+Hyprland 0.55 deprecated the `hyprlang` string-based dispatcher format in favor of a Lua-based API (`hl.dsp.*`). This broke all compositor interactions (launching apps, switching workspaces, focusing windows). This fork restores full functionality:
+
+- **Workspace switching**: `workspace N` → `hl.dsp.focus({workspace=N})`
+- **Window focus**: `focuswindow address:0x…` → `hl.dsp.focus({window="address:0x…"})`
+- **Window close**: `killwindow` → `hl.dsp.window.kill({window=…})`
+- **DPMS**: `dpms off/on` → `hl.dsp.dpms({action="disable"/"enable"})`
+- **Exit / Spawn**: migrated to native Lua calls and `Quickshell.execDetached()`
+
+### Atomic `no_warps` for Bar Interactions
+
+When clicking on workspace indicators or window entries in the bar, the cursor no longer warps to the focused window. This uses `hyprctl eval` to atomically toggle `no_warps=true`, dispatch the action, and restore the original value — all in a single call.
+
+### Workspace Widget Visual Tweaks
+
+- Increased `baseItemSize` and adjusted `textRatio` for better icon/text proportions
+- Moved the workspace badge position inside the group border (positive margins instead of negative)
+- Removed the opaque capsule background from grouped workspace containers (`color: "transparent"`)
+- Replaced `switchByOffset` with `CompositorService.scrollWorkspaceContent` for scroll-to-switch
+- Adjusted badge scale and font size for a cleaner look
+
+### WorkspacePill Text Scaling
+
+- Adjusted `pointSize` calculation in `WorkspacePill.qml` for better text sizing in vertical bars
+
+### New Widget: `WorkspaceTaskbar`
+
+A hybrid widget that combines the **Workspace** grouping layout with **Taskbar** window management. Windows are displayed grouped by workspace, each with an icon and optional title text — like having a taskbar inside each workspace group.
+
+**Features:**
+- Windows grouped by workspace with configurable border and badge
+- Icon + title text per window (same as Taskbar)
+- Smart width: title width adapts to available bar space
+- Pinned applications support
+- Full right-click context menu: Focus, Pin/Unpin, Close, Desktop Actions, Widget Settings
+- Scroll-to-switch workspaces
+- All Workspace color options (focused/occupied/empty colors)
+- All Taskbar options (icon scale, title width, colorize icons, unfocused opacity)
+
+**New files:**
+- `Modules/Bar/Widgets/WorkspaceTaskbar.qml` — main widget
+- `Modules/Bar/Extras/WorkspaceTaskbarGroup.qml` — per-workspace group delegate
+- `Modules/Bar/Extras/WorkspaceTaskbarEntry.qml` — per-window entry delegate
+- `Modules/Panels/Settings/Bar/WidgetSettings/WorkspaceTaskbarSettings.qml` — settings panel
+
+To use it, add **WorkspaceTaskbar** from the widget picker in the bar settings.
+
+---
+
 ## What is Noctalia?
 
 A beautiful, minimal desktop shell for Wayland that actually gets out of your way. Built on [Quickshell](https://quickshell.outfoxxed.me/) (Qt/QML) with a warm lavender aesthetic that you can easily customize to match your vibe.

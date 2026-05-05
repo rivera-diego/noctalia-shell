@@ -41,7 +41,8 @@ Singleton {
                            "Volume": volumeComponent,
                            "VPN": vpnComponent,
                            "WallpaperSelector": wallpaperSelectorComponent,
-                           "Workspace": workspaceComponent
+                           "Workspace": workspaceComponent,
+                           "WorkspaceTaskbar": workspaceTaskbarComponent
                          })
 
   property var widgetSettingsMap: ({
@@ -74,7 +75,8 @@ Singleton {
                                      "Volume": "WidgetSettings/VolumeSettings.qml",
                                      "VPN": "WidgetSettings/VPNSettings.qml",
                                      "WallpaperSelector": "WidgetSettings/WallpaperSelectorSettings.qml",
-                                     "Workspace": "WidgetSettings/WorkspaceSettings.qml"
+                                     "Workspace": "WidgetSettings/WorkspaceSettings.qml",
+                                     "WorkspaceTaskbar": "WidgetSettings/WorkspaceTaskbarSettings.qml"
                                    })
 
   property var widgetMetadata: ({
@@ -319,6 +321,26 @@ Singleton {
                                   },
                                   "WallpaperSelector": {
                                     "iconColor": "none"
+                                  },
+                                  "WorkspaceTaskbar": {
+                                    "followFocusedScreen": false,
+                                    "hideUnoccupied": false,
+                                    "enableScrollWheel": true,
+                                    "labelMode": "index",
+                                    "characterCount": 2,
+                                    "focusedColor": "primary",
+                                    "occupiedColor": "secondary",
+                                    "emptyColor": "secondary",
+                                    "groupedBorderOpacity": 0.3,
+                                    "showWorkspaceBadge": true,
+                                    "showTitle": true,
+                                    "colorizeIcons": false,
+                                    "iconScale": 0.8,
+                                    "showPinnedApps": true,
+                                    "smartWidth": true,
+                                    "maxTaskbarWidth": 70,
+                                    "titleWidth": 100,
+                                    "unfocusedIconsOpacity": 0.6
                                   }
                                 })
 
@@ -409,6 +431,9 @@ Singleton {
   }
   property Component workspaceComponent: Component {
     Workspace {}
+  }
+  property Component workspaceTaskbarComponent: Component {
+    WorkspaceTaskbar {}
   }
   property Component taskbarComponent: Component {
     Taskbar {}
