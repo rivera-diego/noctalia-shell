@@ -316,18 +316,18 @@ Singleton {
       return "#FFFFFF";
     case "black":
       return "#000000";
-    case "red":
-      return "#F44336";
-    case "green":
-      return "#4CAF50";
-    case "blue":
-      return "#2196F3";
-    case "yellow":
-      return "#FFEB3B";
-    case "purple":
-      return "#9C27B0";
-    case "cyan":
-      return "#00BCD4";
+    case "primary-dim":
+      return Qt.color(Qt.darker(root.mPrimary, 1.8));
+    case "secondary-dim":
+      return Qt.color(Qt.darker(root.mSecondary, 1.8));
+    case "tertiary-dim":
+      return Qt.color(Qt.darker(root.mTertiary, 1.8));
+    case "error-dim":
+      return Qt.color(Qt.darker(root.mError, 1.8));
+    case "surface-bright":
+      return Qt.color(Qt.lighter(root.mSurfaceVariant, 1.6));
+    case "surface-tint":
+      return Qt.color(Qt.tint(root.mSurfaceVariant, Qt.alpha(root.mPrimary, 0.3)));
     default:
       return root.mOnSurface;
     }
@@ -347,18 +347,18 @@ Singleton {
       return "#000000";
     case "black":
       return "#FFFFFF";
-    case "red":
-      return "#FFFFFF";
-    case "green":
-      return "#FFFFFF";
-    case "blue":
-      return "#FFFFFF";
-    case "yellow":
-      return "#000000";
-    case "purple":
-      return "#FFFFFF";
-    case "cyan":
-      return "#000000";
+    case "primary-dim":
+      return root.mOnPrimary;
+    case "secondary-dim":
+      return root.mOnSecondary;
+    case "tertiary-dim":
+      return root.mOnTertiary;
+    case "error-dim":
+      return root.mOnError;
+    case "surface-bright":
+      return root.mOnSurface;
+    case "surface-tint":
+      return root.mOnSurface;
     default:
       return root.mSurface;
     }
@@ -378,18 +378,18 @@ Singleton {
       return "#FFFFFF";
     case "black":
       return "#000000";
-    case "red":
-      return "#F44336";
-    case "green":
-      return "#4CAF50";
-    case "blue":
-      return "#2196F3";
-    case "yellow":
-      return "#FFEB3B";
-    case "purple":
-      return "#9C27B0";
-    case "cyan":
-      return "#00BCD4";
+    case "primary-dim":
+      return Qt.color(Qt.darker(root.mPrimary, 1.8));
+    case "secondary-dim":
+      return Qt.color(Qt.darker(root.mSecondary, 1.8));
+    case "tertiary-dim":
+      return Qt.color(Qt.darker(root.mTertiary, 1.8));
+    case "error-dim":
+      return Qt.color(Qt.darker(root.mError, 1.8));
+    case "surface-bright":
+      return Qt.color(Qt.lighter(root.mSurfaceVariant, 1.6));
+    case "surface-tint":
+      return Qt.color(Qt.tint(root.mSurfaceVariant, Qt.alpha(root.mPrimary, 0.3)));
     default:
       return "transparent";
     }
@@ -438,36 +438,36 @@ Singleton {
       "name": I18n.tr("common.error")
     },
     {
+      "key": "primary-dim",
+      "name": "Primary Dim"
+    },
+    {
+      "key": "secondary-dim",
+      "name": "Secondary Dim"
+    },
+    {
+      "key": "tertiary-dim",
+      "name": "Tertiary Dim"
+    },
+    {
+      "key": "error-dim",
+      "name": "Error Dim"
+    },
+    {
+      "key": "surface-bright",
+      "name": "Surface Bright"
+    },
+    {
+      "key": "surface-tint",
+      "name": "Surface Tint"
+    },
+    {
       "key": "white",
       "name": "White"
     },
     {
       "key": "black",
       "name": "Black"
-    },
-    {
-      "key": "red",
-      "name": "Red"
-    },
-    {
-      "key": "green",
-      "name": "Green"
-    },
-    {
-      "key": "blue",
-      "name": "Blue"
-    },
-    {
-      "key": "yellow",
-      "name": "Yellow"
-    },
-    {
-      "key": "purple",
-      "name": "Purple"
-    },
-    {
-      "key": "cyan",
-      "name": "Cyan"
     }
   ]
 

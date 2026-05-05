@@ -32,11 +32,17 @@ RowLayout {
     indicatorTooltip: root.indicatorTooltip
   }
 
-  RowLayout {
-    id: colourRow
+  readonly property int colorCount: Color.colorKeyModel.length
+  readonly property int columnCount: 5
+
+  GridLayout {
+    id: colourGrid
 
     opacity: enabled ? 1.0 : 0.6
-    Layout.minimumWidth: root.diameter * Color.colorKeyModel.length
+    columns: root.columnCount
+    columnSpacing: Style.marginXXS
+    rowSpacing: Style.marginXXS
+    Layout.minimumWidth: root.diameter * root.columnCount
 
     Repeater {
       model: Color.colorKeyModel
