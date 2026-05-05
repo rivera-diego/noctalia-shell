@@ -312,6 +312,22 @@ Singleton {
       return root.mTertiary;
     case "error":
       return root.mError;
+    case "white":
+      return "#FFFFFF";
+    case "black":
+      return "#000000";
+    case "red":
+      return "#F44336";
+    case "green":
+      return "#4CAF50";
+    case "blue":
+      return "#2196F3";
+    case "yellow":
+      return "#FFEB3B";
+    case "purple":
+      return "#9C27B0";
+    case "cyan":
+      return "#00BCD4";
     default:
       return root.mOnSurface;
     }
@@ -327,6 +343,22 @@ Singleton {
       return root.mOnTertiary;
     case "error":
       return root.mOnError;
+    case "white":
+      return "#000000";
+    case "black":
+      return "#FFFFFF";
+    case "red":
+      return "#FFFFFF";
+    case "green":
+      return "#FFFFFF";
+    case "blue":
+      return "#FFFFFF";
+    case "yellow":
+      return "#000000";
+    case "purple":
+      return "#FFFFFF";
+    case "cyan":
+      return "#000000";
     default:
       return root.mSurface;
     }
@@ -342,6 +374,22 @@ Singleton {
       return root.mTertiary;
     case "error":
       return root.mError;
+    case "white":
+      return "#FFFFFF";
+    case "black":
+      return "#000000";
+    case "red":
+      return "#F44336";
+    case "green":
+      return "#4CAF50";
+    case "blue":
+      return "#2196F3";
+    case "yellow":
+      return "#FFEB3B";
+    case "purple":
+      return "#9C27B0";
+    case "cyan":
+      return "#00BCD4";
     default:
       return "transparent";
     }
@@ -388,6 +436,38 @@ Singleton {
     {
       "key": "error",
       "name": I18n.tr("common.error")
+    },
+    {
+      "key": "white",
+      "name": "White"
+    },
+    {
+      "key": "black",
+      "name": "Black"
+    },
+    {
+      "key": "red",
+      "name": "Red"
+    },
+    {
+      "key": "green",
+      "name": "Green"
+    },
+    {
+      "key": "blue",
+      "name": "Blue"
+    },
+    {
+      "key": "yellow",
+      "name": "Yellow"
+    },
+    {
+      "key": "purple",
+      "name": "Purple"
+    },
+    {
+      "key": "cyan",
+      "name": "Cyan"
     }
   ]
 
