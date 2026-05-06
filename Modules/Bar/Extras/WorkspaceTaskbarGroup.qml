@@ -55,7 +55,22 @@ Item {
     var wsId = workspaceModel ? workspaceModel.id : undefined;
     if (wsId !== undefined && wsId !== null) {
       var wins = CompositorService.getWindowsForWorkspace(wsId);
-      liveWindows = wins;
+      // Defensive filter: ensure snapshots still exist in the live CompositorService
+      // window list to avoid stale/ghost entries after abrupt restarts.
+      var filtered = [];
+      for (var wi = 0; wi < wins.length; wi++) {
+        var candidate = wins[wi];
+        if (!candidate || !candidate.id) continue;
+        var exists = false;
+        for (var j = 0; j < CompositorService.windows.count; j++) {
+          try {
+            var cw = CompositorService.windows.get(j);
+            if (cw && String(cw.id) === String(candidate.id)) { exists = true; break; }
+          } catch (e) {}
+        }
+        if (exists) filtered.push(candidate);
+      }
+      liveWindows = filtered;
       if (root.showPinnedApps) {
         var pinnedApps = Settings.data.dock.pinnedApps || [];
         var runningAppIds = wins.map(function(w) { return (w.appId || "").toLowerCase(); });
@@ -207,8 +222,8 @@ Item {
     visible: root.showWorkspaceBadge && root.labelMode !== "none" && (root.hasWindows || workspaceModel.isFocused)
     anchors.left: groupRect.left
     anchors.top: groupRect.top
-    anchors.leftMargin: -Style.fontSizeXS * 0.3
-    anchors.topMargin: -Style.fontSizeXS * 0.3
+    anchors.leftMargin: Style.fontSizeXS * 0.5
+    anchors.topMargin: -Style.fontSizeXS * 0.5
 
     width: Math.max(badgeLabel.implicitWidth + Style.margin2XS, Style.fontSizeXXS * 2)
     height: Math.max(badgeLabel.implicitHeight + Style.marginXS, Style.fontSizeXXS * 2)
@@ -247,7 +262,7 @@ Item {
         return workspaceModel.idx.toString();
       }
       family: Settings.data.ui.fontFixed
-      font { pointSize: barFontSize * 0.6; weight: Font.Bold; capitalization: Font.AllUppercase }
+      font { pointSize: barFontSize * 0.7; weight: Font.Bold; capitalization: Font.AllUppercase }
       applyUiScale: false
       color: workspaceModel.isFocused ? Color.resolveOnColorKey(root.focusedColor)
            : workspaceModel.isUrgent ? Color.mOnError
