@@ -340,7 +340,10 @@ Singleton {
                                     "smartWidth": true,
                                     "maxTaskbarWidth": 70,
                                     "titleWidth": 100,
-                                    "unfocusedIconsOpacity": 0.6
+                                    "unfocusedIconsOpacity": 0.6,
+                                    "entryBgColor": "none",
+                                    "titleFocusedColor": "none",
+                                    "titleDefaultColor": "none"
                                   }
                                 })
 

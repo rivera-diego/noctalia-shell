@@ -133,21 +133,33 @@ def generate_normal_dark(palette: list[Color]) -> dict[str, str]:
     tertiary_container = make_container_dark(tertiary_adjusted)
     error_container = make_container_dark(error)
 
-    # Surface: NEUTRAL dark - macOS / Fluent style
+    # Surface: COLORFUL dark - a deep, saturated version of primary
+    # Heuristic: Shift Cyan (160-200) slightly towards Blue (+10) to avoid "Teal" look
     surface_hue, s, _ = palette[0].to_hsl()
-    surface_saturation_cap = 0.0
+    if 160 <= surface_hue <= 200:
+        surface_hue = (surface_hue + 10) % 360
 
-    base_surface = Color.from_hsl(surface_hue, surface_saturation_cap, 0.5)
+    # Reduce saturation for warm hues (red/orange/yellow) - they feel overwhelming as surfaces
+    # Warm hues: 0-60 and 300-360
+    if surface_hue < 60 or surface_hue > 300:
+        surface_saturation_cap = 0.35  # More desaturated for warm colors
+    elif 60 <= surface_hue < 120:
+        surface_saturation_cap = 0.50  # Moderate for yellow-greens
+    else:
+        surface_saturation_cap = 0.90  # Keep cool colors vibrant
 
+    base_surface = Color.from_hsl(surface_hue, min(s, surface_saturation_cap), 0.5)
+
+    # Preserving saturation (up to the cap) to be true to primary color
     surface = adjust_surface(base_surface, surface_saturation_cap, 0.12)
-    surface_variant = adjust_surface(base_surface, surface_saturation_cap, 0.16)
+    surface_variant = adjust_surface(base_surface, min(0.80, surface_saturation_cap), 0.16)
 
-    # Surface containers - progressive lightness for visual hierarchy (neutral)
-    surface_container_lowest = adjust_surface(base_surface, surface_saturation_cap, 0.06)
-    surface_container_low = adjust_surface(base_surface, surface_saturation_cap, 0.10)
-    surface_container = adjust_surface(base_surface, surface_saturation_cap, 0.20)
-    surface_container_high = adjust_surface(base_surface, surface_saturation_cap, 0.18)
-    surface_container_highest = adjust_surface(base_surface, surface_saturation_cap, 0.22)
+    # Surface containers - progressive lightness for visual hierarchy (keep primary hue)
+    surface_container_lowest = adjust_surface(base_surface, 0.85, 0.06)
+    surface_container_low = adjust_surface(base_surface, 0.85, 0.10)
+    surface_container = adjust_surface(base_surface, 0.70, 0.20)
+    surface_container_high = adjust_surface(base_surface, 0.75, 0.18)
+    surface_container_highest = adjust_surface(base_surface, 0.70, 0.22)
 
     # Text colors - desaturated
     text_h, _, _ = palette[0].to_hsl()
@@ -157,8 +169,8 @@ def generate_normal_dark(palette: list[Color]) -> dict[str, str]:
     base_on_surface_variant = Color.from_hsl(text_h, 0.05, 0.70)
     on_surface_variant = ensure_contrast(base_on_surface_variant, surface_variant, 4.5)
 
-    outline = ensure_contrast(adjust_surface(palette[0], 0.0, 0.30), surface, 3.0)
-    outline_variant = ensure_contrast(adjust_surface(palette[0], 0.0, 0.40), surface, 3.0)
+    outline = ensure_contrast(adjust_surface(palette[0], 0.10, 0.30), surface, 3.0)
+    outline_variant = ensure_contrast(adjust_surface(palette[0], 0.10, 0.40), surface, 3.0)
 
     # Contrasting foregrounds - dark text on bright accent colors
     dark_fg = Color.from_hsl(palette[0].to_hsl()[0], 0.20, 0.12)  # Darker for better contrast
@@ -212,9 +224,9 @@ def generate_normal_dark(palette: list[Color]) -> dict[str, str]:
     on_tertiary_fixed_variant = ensure_contrast(Color.from_hsl(tertiary.to_hsl()[0], 0.15, 0.20), tertiary_fixed_dim, 4.5)
 
     # Surface dim - darker than surface for dimmed areas
-    surface_dim = adjust_surface(base_surface, 0.0, 0.08)
+    surface_dim = adjust_surface(base_surface, 0.85, 0.08)
     # Surface bright - lighter than surface
-    surface_bright = adjust_surface(base_surface, 0.0, 0.24)
+    surface_bright = adjust_surface(base_surface, 0.75, 0.24)
 
     return {
         # Primary
@@ -334,16 +346,17 @@ def generate_normal_light(palette: list[Color]) -> dict[str, str]:
     tertiary_container = make_container_light(tertiary_adjusted)
     error_container = make_container_light(error)
 
-    # Surface: NEUTRAL light - macOS / Fluent style
-    surface = adjust_surface(palette[0], 0.0, 0.95)
-    surface_variant = adjust_surface(palette[0], 0.0, 0.90)  # Darker than surface
+    # Surface: COLORFUL light - a pastel, saturated version of primary
+    # Preserving saturation (up to 0.9) to be true to primary color
+    surface = adjust_surface(palette[0], 0.90, 0.90)
+    surface_variant = adjust_surface(palette[0], 0.80, 0.78)  # Darker than surface
 
-    # Surface containers - progressive darkening for light mode (neutral)
-    surface_container_lowest = adjust_surface(palette[0], 0.0, 0.98)   # Lightest
-    surface_container_low = adjust_surface(palette[0], 0.0, 0.94)
-    surface_container = adjust_surface(palette[0], 0.0, 0.90)
-    surface_container_high = adjust_surface(palette[0], 0.0, 0.86)
-    surface_container_highest = adjust_surface(palette[0], 0.0, 0.82)  # Darkest
+    # Surface containers - progressive darkening for light mode (keep primary hue)
+    surface_container_lowest = adjust_surface(palette[0], 0.85, 0.96)   # Lightest
+    surface_container_low = adjust_surface(palette[0], 0.85, 0.92)
+    surface_container = adjust_surface(palette[0], 0.80, 0.86)
+    surface_container_high = adjust_surface(palette[0], 0.75, 0.84)
+    surface_container_highest = adjust_surface(palette[0], 0.70, 0.80)  # Darkest
 
     # Foreground colors - tinted with primary hue
     text_h, _, _ = palette[0].to_hsl()
@@ -392,15 +405,15 @@ def generate_normal_light(palette: list[Color]) -> dict[str, str]:
     on_tertiary_fixed_variant = ensure_contrast(Color.from_hsl(tertiary.to_hsl()[0], 0.15, 0.85), tertiary_fixed_dim, 4.5)
 
     # Surface dim - slightly darker than surface
-    surface_dim = adjust_surface(palette[0], 0.0, 0.82)
+    surface_dim = adjust_surface(palette[0], 0.85, 0.82)
     # Surface bright - brighter than surface
-    surface_bright = adjust_surface(palette[0], 0.0, 0.95)
+    surface_bright = adjust_surface(palette[0], 0.90, 0.95)
 
-    # Outline uses neutral grays
+    # Outline uses primary hue, more saturated
     surface_h, surface_s, _ = palette[0].to_hsl()
-    outline = ensure_contrast(Color.from_hsl(surface_h, 0.0, 0.65), surface, 3.0)
-    outline_variant = ensure_contrast(Color.from_hsl(surface_h, 0.0, 0.75), surface, 3.0)
-    shadow = Color.from_hsl(surface_h, 0.0, 0.80)
+    outline = ensure_contrast(Color.from_hsl(surface_h, max(surface_s * 0.4, 0.25), 0.65), surface, 3.0)
+    outline_variant = ensure_contrast(Color.from_hsl(surface_h, max(surface_s * 0.3, 0.20), 0.75), surface, 3.0)
+    shadow = Color.from_hsl(surface_h, max(surface_s * 0.3, 0.15), 0.80)
     scrim = Color(0, 0, 0)  # Pure black
 
     # Inverse colors - for inverted surfaces (dark surface on light theme)

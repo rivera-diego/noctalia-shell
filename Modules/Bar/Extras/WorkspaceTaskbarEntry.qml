@@ -25,6 +25,9 @@ Item {
   required property bool colorizeIcons
   required property real unfocusedIconsOpacity
   required property int iconRevision
+  required property string entryBgColor
+  required property string titleFocusedColor
+  required property string titleDefaultColor
 
   signal entryClicked()
   signal entryRightClicked(var item)
@@ -44,6 +47,16 @@ Item {
 
   HoverHandler { id: hover }
 
+  // Resolved pill background: user pick overrides the default hover color
+  readonly property color resolvedEntryBg: {
+    if (hover.hovered || root.isFocused) {
+      return root.entryBgColor !== "none"
+        ? Color.resolveColorKey(root.entryBgColor)
+        : Color.mHover;
+    }
+    return "transparent";
+  }
+
   // Focus/hover pill background (only when showTitle)
   Rectangle {
     visible: showTitle && !isVertical
@@ -51,7 +64,7 @@ Item {
     width: parent.width
     height: root.capsuleHeight
     radius: Style.radiusM
-    color: hover.hovered || root.isFocused ? Color.mHover : "transparent"
+    color: root.resolvedEntryBg
     Behavior on color { ColorAnimation { duration: Style.animationFast } }
   }
 
@@ -109,7 +122,9 @@ Item {
       verticalAlignment: Text.AlignVCenter
       horizontalAlignment: Text.AlignLeft
       pointSize: root.barFontSize
-      color: (hover.hovered || root.isFocused) ? Color.mOnHover : Color.mOnSurface
+      color: (hover.hovered || root.isFocused)
+        ? (root.titleFocusedColor !== "none" ? Color.resolveColorKey(root.titleFocusedColor) : Color.mOnHover)
+        : (root.titleDefaultColor !== "none" ? Color.resolveColorKey(root.titleDefaultColor) : Color.mOnSurface)
     }
   }
 

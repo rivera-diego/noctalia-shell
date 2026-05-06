@@ -61,6 +61,9 @@ Item {
   readonly property bool smartWidth: (widgetSettings.smartWidth !== undefined) ? widgetSettings.smartWidth : widgetMetadata.smartWidth
   readonly property int maxTaskbarWidthPercent: (widgetSettings.maxTaskbarWidth !== undefined) ? widgetSettings.maxTaskbarWidth : widgetMetadata.maxTaskbarWidth
   readonly property real unfocusedIconsOpacity: (widgetSettings.unfocusedIconsOpacity !== undefined) ? widgetSettings.unfocusedIconsOpacity : widgetMetadata.unfocusedIconsOpacity
+  readonly property string entryBgColor: (widgetSettings.entryBgColor !== undefined) ? widgetSettings.entryBgColor : widgetMetadata.entryBgColor
+  readonly property string titleFocusedColor: (widgetSettings.titleFocusedColor !== undefined) ? widgetSettings.titleFocusedColor : widgetMetadata.titleFocusedColor
+  readonly property string titleDefaultColor: (widgetSettings.titleDefaultColor !== undefined) ? widgetSettings.titleDefaultColor : widgetMetadata.titleDefaultColor
 
   readonly property int baseItemSize: Style.toOdd(capsuleHeight * Math.max(0.1, iconScale))
 
@@ -415,6 +418,9 @@ Item {
           showTitle: root.showTitle
           colorizeIcons: root.colorizeIcons
           unfocusedIconsOpacity: root.unfocusedIconsOpacity
+          entryBgColor: root.entryBgColor
+          titleFocusedColor: root.titleFocusedColor
+          titleDefaultColor: root.titleDefaultColor
           showPinnedApps: root.showPinnedApps
           groupedBorderOpacity: root.groupedBorderOpacity
           focusedColor: root.focusedColor

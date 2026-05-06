@@ -27,6 +27,9 @@ Item {
   required property bool colorizeIcons
   required property real unfocusedIconsOpacity
   required property bool showPinnedApps
+  required property string entryBgColor
+  required property string titleFocusedColor
+  required property string titleDefaultColor
 
   // Workspace visuals
   required property real groupedBorderOpacity
@@ -174,6 +177,9 @@ Item {
           showTitle: root.showTitle
           colorizeIcons: root.colorizeIcons
           unfocusedIconsOpacity: root.unfocusedIconsOpacity
+          entryBgColor: root.entryBgColor
+          titleFocusedColor: root.titleFocusedColor
+          titleDefaultColor: root.titleDefaultColor
           iconRevision: root.iconRevision
           onEntryClicked: {}
           onEntryRightClicked: function(item) {
@@ -202,6 +208,9 @@ Item {
           showTitle: root.showTitle
           colorizeIcons: root.colorizeIcons
           unfocusedIconsOpacity: root.unfocusedIconsOpacity
+          entryBgColor: root.entryBgColor
+          titleFocusedColor: root.titleFocusedColor
+          titleDefaultColor: root.titleDefaultColor
           iconRevision: root.iconRevision
           onEntryClicked: {}
           onEntryRightClicked: function(item) {

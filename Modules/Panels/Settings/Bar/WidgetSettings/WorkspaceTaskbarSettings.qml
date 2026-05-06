@@ -35,6 +35,9 @@ ColumnLayout {
   property bool valueSmartWidth: widgetData.smartWidth !== undefined ? widgetData.smartWidth : widgetMetadata.smartWidth
   property int valueMaxTaskbarWidth: widgetData.maxTaskbarWidth !== undefined ? widgetData.maxTaskbarWidth : widgetMetadata.maxTaskbarWidth
   property real valueUnfocusedIconsOpacity: widgetData.unfocusedIconsOpacity !== undefined ? widgetData.unfocusedIconsOpacity : widgetMetadata.unfocusedIconsOpacity
+  property string valueEntryBgColor: widgetData.entryBgColor !== undefined ? widgetData.entryBgColor : widgetMetadata.entryBgColor
+  property string valueTitleFocusedColor: widgetData.titleFocusedColor !== undefined ? widgetData.titleFocusedColor : widgetMetadata.titleFocusedColor
+  property string valueTitleDefaultColor: widgetData.titleDefaultColor !== undefined ? widgetData.titleDefaultColor : widgetMetadata.titleDefaultColor
 
   function saveSettings() {
     var s = Object.assign({}, widgetData || {});
@@ -56,6 +59,9 @@ ColumnLayout {
     s.maxTaskbarWidth = valueMaxTaskbarWidth;
     s.titleWidth = parseInt(titleWidthInput.text) || widgetMetadata.titleWidth;
     s.unfocusedIconsOpacity = valueUnfocusedIconsOpacity;
+    s.entryBgColor = valueEntryBgColor;
+    s.titleFocusedColor = valueTitleFocusedColor;
+    s.titleDefaultColor = valueTitleDefaultColor;
     settingsChanged(s);
   }
 
@@ -234,5 +240,32 @@ ColumnLayout {
     description: I18n.tr("bar.workspace.empty-color-description")
     currentKey: valueEmptyColor
     onSelected: key => { valueEmptyColor = key; saveSettings(); }
+  }
+
+  NDivider { Layout.fillWidth: true }
+
+  // ── Taskbar item colors ──
+  NColorChoice {
+    visible: valueShowTitle && !isVerticalBar
+    label: "Item Background Color"
+    description: "Color of the pill shown behind focused or hovered items"
+    currentKey: valueEntryBgColor
+    onSelected: key => { valueEntryBgColor = key; saveSettings(); }
+  }
+
+  NColorChoice {
+    visible: valueShowTitle && !isVerticalBar
+    label: "Title Focused Color"
+    description: "Text color of the title when the window is focused or hovered"
+    currentKey: valueTitleFocusedColor
+    onSelected: key => { valueTitleFocusedColor = key; saveSettings(); }
+  }
+
+  NColorChoice {
+    visible: valueShowTitle && !isVerticalBar
+    label: "Title Default Color"
+    description: "Text color of the title when the window is not focused"
+    currentKey: valueTitleDefaultColor
+    onSelected: key => { valueTitleDefaultColor = key; saveSettings(); }
   }
 }
