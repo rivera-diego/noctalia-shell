@@ -149,21 +149,8 @@ Item {
       contentX: dockRoot.isVertical && contentWidth < width ? (contentWidth - width) / 2 : 0
       contentY: !dockRoot.isVertical && contentHeight < height ? (contentHeight - height) / 2 : 0
 
-      WheelHandler {
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        onWheel: event => {
-                   // Only scroll dock content when there's no multi-window cycling to do
-                   var delta = (event.angleDelta.y !== 0) ? event.angleDelta.y : event.angleDelta.x;
-                   if (dockRoot.isVertical) {
-                     dock.contentY = Math.max(-dock.topMargin, Math.min(dock.contentHeight - dock.height + dock.bottomMargin, dock.contentY - delta));
-                   } else {
-                     // For horizontal dock, we want to scroll contentX with BOTH x and y wheels
-                     var hDelta = (event.angleDelta.x !== 0) ? event.angleDelta.x : event.angleDelta.y;
-                     dock.contentX = Math.max(-dock.leftMargin, Math.min(dock.contentWidth - dock.width + dock.rightMargin, dock.contentX - hDelta));
-                   }
-                   event.accepted = true;
-                 }
-      }
+      // No WheelHandler here — all scroll events are handled by
+      // dockWheelHandler at dockContentRoot level (scrollWorkspaceContent).
 
       ScrollBar.horizontal: ScrollBar {
         visible: !dockRoot.isVertical && dock.interactive
@@ -273,17 +260,25 @@ Item {
         }
       }
 
-      // Use GridLayout for flexible horizontal/vertical arrangement
-      GridLayout {
+      // Flow layout enables smooth move transitions when icons reorder.
+      // GridLayout doesn't support move/displaced transitions — Flow does.
+      Flow {
         id: dockLayout
-        columns: dockRoot.isVertical ? 1 : -1
-        rows: dockRoot.isVertical ? -1 : 1
-        rowSpacing: Style.marginS
-        columnSpacing: Style.marginS
+        flow: dockRoot.isVertical ? Flow.TopToBottom : Flow.LeftToRight
+        spacing: Style.marginS
 
         // Ensure the layout takes its full implicit size
         width: implicitWidth
         height: implicitHeight
+
+        // Smooth slide animation when icons swap positions
+        move: Transition {
+          NumberAnimation {
+            properties: "x, y"
+            duration: Style.animationNormal || 250
+            easing.type: Easing.OutCubic
+          }
+        }
 
         Component {
           id: launcherButtonComponent
@@ -504,13 +499,8 @@ Item {
           visible: active
           sourceComponent: launcherButtonComponent
           readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.18))
-          Layout.preferredWidth: active ? (dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize) : 0
-          Layout.preferredHeight: active ? (dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2) : 0
-          Layout.minimumWidth: active ? Layout.preferredWidth : 0
-          Layout.minimumHeight: active ? Layout.preferredHeight : 0
-          Layout.maximumWidth: active ? Layout.preferredWidth : 0
-          Layout.maximumHeight: active ? Layout.preferredHeight : 0
-          Layout.alignment: Qt.AlignCenter
+          width: active ? (dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize) : 0
+          height: active ? (dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2) : 0
         }
 
         Repeater {
@@ -519,9 +509,8 @@ Item {
           delegate: Item {
             id: appButton
             readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.18))
-            Layout.preferredWidth: dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize
-            Layout.preferredHeight: dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2
-            Layout.alignment: Qt.AlignCenter
+            width: dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize
+            height: dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2
 
             // --- liveWindows: CompositorService window objects for this app ---
             // Same pattern as Workspace.qml's groupedContainer.liveWindows.
@@ -1024,13 +1013,8 @@ Item {
           visible: active
           sourceComponent: launcherButtonComponent
           readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.18))
-          Layout.preferredWidth: active ? (dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize) : 0
-          Layout.preferredHeight: active ? (dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2) : 0
-          Layout.minimumWidth: active ? Layout.preferredWidth : 0
-          Layout.minimumHeight: active ? Layout.preferredHeight : 0
-          Layout.maximumWidth: active ? Layout.preferredWidth : 0
-          Layout.maximumHeight: active ? Layout.preferredHeight : 0
-          Layout.alignment: Qt.AlignCenter
+          width: active ? (dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize) : 0
+          height: active ? (dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2) : 0
         }
       }
     }
