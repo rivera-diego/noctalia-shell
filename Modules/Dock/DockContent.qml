@@ -51,6 +51,77 @@ Item {
     }
   }
 
+  // WheelHandler at dockContentRoot level — completely outside the Flickable.
+  // This mirrors how Workspace.qml places its WheelHandler on the root Item.
+  // It intercepts scroll events BEFORE the Flickable can consume them.
+  // When the cursor is over an icon with 2+ windows -> cycle windows.
+  // When the cursor is over an icon with 0-1 windows -> pass through to Flickable.
+  WheelHandler {
+    id: dockWheelHandler
+    target: dockContentRoot
+    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+    grabPermissions: PointerHandler.CanTakeOverFromAnything
+    onWheel: function(event) {
+      // Find which app button is under the cursor
+      var localPos = dockContentRoot.mapFromGlobal(event.globalPosition.x, event.globalPosition.y);
+      var hoveredItem = dockContentRoot.childAt(localPos.x, localPos.y);
+
+      // Walk down to find the dockContainer, then the flickable, then the appButton
+      // We read liveWindows from the focused appButton via the appMouseArea hovered flag
+      // Instead, iterate dockLayout children to find the hovered one
+      var wins = [];
+      var focusedIdx = -1;
+      var matchedButton = null;
+
+      // Check all appButtons in the dock layout
+      for (var i = 0; i < dockLayout.children.length; i++) {
+        var child = dockLayout.children[i];
+        if (child && child.objectName === "dockAppButton") {
+          var itemPos = child.mapFromGlobal(event.globalPosition.x, event.globalPosition.y);
+          if (itemPos.x >= 0 && itemPos.x <= child.width && itemPos.y >= 0 && itemPos.y <= child.height) {
+            matchedButton = child;
+            wins = child.liveWindows || [];
+            focusedIdx = child.focusedWindowIndex;
+            break;
+          }
+        }
+      }
+
+      if (!matchedButton || wins.length <= 1) {
+        // No multi-window icon under cursor — let Flickable scroll
+        event.accepted = false;
+        return;
+      }
+
+      if (dockContentRoot.wheelCooldown) {
+        event.accepted = true;
+        return;
+      }
+
+      var dy = event.angleDelta.y, dx = event.angleDelta.x;
+      var delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
+      dockContentRoot.wheelAccumulatedDelta += delta;
+
+      if (Math.abs(dockContentRoot.wheelAccumulatedDelta) >= 120) {
+        var dir = dockContentRoot.wheelAccumulatedDelta > 0 ? -1 : 1;
+        if (Settings.data.general.reverseScroll) dir *= -1;
+
+        var nextIdx = focusedIdx >= 0
+          ? (focusedIdx + dir + wins.length) % wins.length
+          : (dir > 0 ? 0 : wins.length - 1);
+
+        CompositorService.focusWindow(wins[nextIdx]);
+
+        dockContentRoot.wheelCooldown = true;
+        wheelDebounce.restart();
+        dockContentRoot.wheelAccumulatedDelta = 0;
+        event.accepted = true;
+      } else {
+        event.accepted = true;
+      }
+    }
+  }
+
   Rectangle {
     id: dockContainer
     // For vertical dock, swap width and height logic
@@ -121,6 +192,7 @@ Item {
       WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
+                   // Only scroll dock content when there's no multi-window cycling to do
                    var delta = (event.angleDelta.y !== 0) ? event.angleDelta.y : event.angleDelta.x;
                    if (dockRoot.isVertical) {
                      dock.contentY = Math.max(-dock.topMargin, Math.min(dock.contentHeight - dock.height + dock.bottomMargin, dock.contentY - delta));
@@ -546,46 +618,7 @@ Item {
             readonly property bool baseIndicatorVisible: Settings.data.dock.inactiveIndicators ? isRunning : isActive
             readonly property bool showGroupedIndicator: Settings.data.dock.groupApps && groupedCount > 1 && isRunning
 
-            // WheelHandler at the Item level - NOT inside the Flickable.
-            // This is the same technique Workspace.qml uses: a top-level WheelHandler
-            // that grabs events before the Flickable scrolling does.
-            WheelHandler {
-              target: appButton
-              acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-              onWheel: function(event) {
-                if (appButton.liveWindows.length <= 1) {
-                  event.accepted = false;
-                  return;
-                }
-
-                if (dockContentRoot.wheelCooldown) {
-                  event.accepted = true;
-                  return;
-                }
-
-                var dy = event.angleDelta.y, dx = event.angleDelta.x;
-                var delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
-                dockContentRoot.wheelAccumulatedDelta += delta;
-
-                if (Math.abs(dockContentRoot.wheelAccumulatedDelta) >= 120) {
-                  var dir = dockContentRoot.wheelAccumulatedDelta > 0 ? -1 : 1;
-                  if (Settings.data.general.reverseScroll) dir *= -1;
-
-                  const wins = appButton.liveWindows;
-                  const activeIdx = appButton.focusedWindowIndex;
-                  let nextIdx = activeIdx >= 0
-                    ? (activeIdx + dir + wins.length) % wins.length
-                    : (dir > 0 ? 0 : wins.length - 1);
-
-                  CompositorService.focusWindow(wins[nextIdx]);
-
-                  dockContentRoot.wheelCooldown = true;
-                  wheelDebounce.restart();
-                  dockContentRoot.wheelAccumulatedDelta = 0;
-                  event.accepted = true;
-                }
-              }
-            }
+            // WheelHandler removed — now handled globally by dockWheelHandler at dockContentRoot level
 
             // Store index for drag-and-drop
             property int modelIndex: index
