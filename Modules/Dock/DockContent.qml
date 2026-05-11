@@ -194,6 +194,16 @@ Item {
         return source.filter(toplevel => toplevel && allToplevels.includes(toplevel));
       }
 
+      // Returns the primary Wayland toplevel for an app — used only for middle-click close
+      function getPrimaryToplevel(appData) {
+        const toplevels = getValidToplevels(appData);
+        if (toplevels.length === 0)
+          return null;
+        if (ToplevelManager && ToplevelManager.activeToplevel && toplevels.includes(ToplevelManager.activeToplevel))
+          return ToplevelManager.activeToplevel;
+        return toplevels[0];
+      }
+
       function launchAppById(appId) {
         if (!appId)
           return;
