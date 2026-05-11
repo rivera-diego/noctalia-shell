@@ -435,6 +435,7 @@ Item {
           masterProgress: root.masterProgress
           effectsActive: root.effectsActive
           effectColor: root.effectColor
+          screenName: root.screenName
           taskbarRoot: root
         }
       }

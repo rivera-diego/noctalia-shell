@@ -794,6 +794,22 @@ Item {
               width: parent.width
               height: parent.height
 
+              y: groupedTaskbarItem.isFocused && !root.isVertical ? -3 : 0
+              x: groupedTaskbarItem.isFocused && root.isVertical ? -3 : 0
+
+              Behavior on y {
+                NumberAnimation {
+                  duration: Style.animationFast
+                  easing.type: Easing.OutBack
+                }
+              }
+              Behavior on x {
+                NumberAnimation {
+                  duration: Style.animationFast
+                  easing.type: Easing.OutBack
+                }
+              }
+
               source: {
                 root.iconRevision; // Force re-evaluation when revision changes
                 return ThemeIcons.iconForAppId(modelData?.appId?.toLowerCase());
@@ -803,23 +819,23 @@ Item {
               opacity: groupedTaskbarItem.isFocused ? Style.opacityFull : unfocusedIconsOpacity
               layer.enabled: root.colorizeIcons && !groupedTaskbarItem.isFocused
 
-              Rectangle {
-                id: groupedFocusIndicator
-                visible: groupedTaskbarItem.isFocused || windowHoverHandler.hovered
-                anchors.bottomMargin: -2
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Style.toOdd(root.iconSize * 0.25)
-                height: 4
-                color: groupedTaskbarItem.isFocused ? Color.mPrimary : Color.mHover
-                radius: Math.min(Style.radiusXXS, width / 2)
-              }
-
               layer.effect: ShaderEffect {
                 property color targetColor: Settings.data.colorSchemes.darkMode ? Color.mOnSurface : Color.mSurfaceVariant
                 property real colorizeMode: 0
                 fragmentShader: Qt.resolvedUrl(Quickshell.shellDir + "/Shaders/qsb/appicon_colorize.frag.qsb")
               }
+            }
+
+            Rectangle {
+              id: groupedFocusIndicator
+              visible: groupedTaskbarItem.isFocused || windowHoverHandler.hovered
+              anchors.bottomMargin: -2
+              anchors.bottom: parent.bottom
+              anchors.horizontalCenter: parent.horizontalCenter
+              width: Style.toOdd(root.iconSize * 0.25)
+              height: 4
+              color: groupedTaskbarItem.isFocused ? Color.mPrimary : Color.mHover
+              radius: Math.min(Style.radiusXXS, width / 2)
             }
 
             MouseArea {
@@ -869,14 +885,16 @@ Item {
           topMargin: Style.fontSizeXS * 0.3
         }
 
-        width: Math.max(groupedWorkspaceNumber.implicitWidth + Style.margin2XS, Style.fontSizeXXS * 2)
-        height: Math.max(groupedWorkspaceNumber.implicitHeight + Style.marginXS, Style.fontSizeXXS * 2)
+        // Tamaño exactamente ajustado al texto (sin padding extra)
+        property real contentSize: Math.max(groupedWorkspaceNumber.implicitWidth, groupedWorkspaceNumber.implicitHeight)
+        width: Math.max(contentSize, 12) // Un tamaño mínimo muy bajo para no forzar que se expanda
+        height: width
 
         Rectangle {
           id: groupedWorkspaceNumberBackground
 
           anchors.fill: parent
-          radius: Math.min(Style.radiusL, width / 2)
+          radius: width / 2 // Forzar círculo perfecto siempre
 
           color: {
             if (groupedContainer.workspaceModel.isFocused)
@@ -941,7 +959,7 @@ Item {
 
           family: Settings.data.ui.fontFixed
           font {
-            pointSize: barFontSize * 0.7
+            pointSize: barFontSize * 0.7 // Restaurado a tu tamaño original
             weight: fontWeight
             capitalization: Font.AllUppercase
           }

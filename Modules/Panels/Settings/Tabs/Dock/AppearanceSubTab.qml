@@ -185,9 +185,9 @@ ColumnLayout {
       visible: Settings.data.dock.dockType === "floating"
       label: I18n.tr("panels.dock.appearance-floating-distance-label")
       description: I18n.tr("panels.dock.appearance-floating-distance-description")
-      from: 0
+      from: -15
       to: 4
-      stepSize: 0.01
+      stepSize: 0.05
       showReset: true
       value: Settings.data.dock.floatingRatio
       defaultValue: Settings.getDefaultValue("dock.floatingRatio")

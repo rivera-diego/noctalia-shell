@@ -28,6 +28,7 @@ Item {
   required property string entryBgColor
   required property string titleFocusedColor
   required property string titleDefaultColor
+  required property string screenName
 
   signal entryClicked()
   signal entryRightClicked(var item)
@@ -45,11 +46,11 @@ Item {
   width: entryW
   height: entryH
 
-  HoverHandler { id: hover }
+  property bool isHovered: false
 
   // Resolved pill background: user pick overrides the default hover color
   readonly property color resolvedEntryBg: {
-    if (hover.hovered || root.isFocused) {
+    if (root.isHovered || root.isFocused) {
       return root.entryBgColor !== "none"
         ? Color.resolveColorKey(root.entryBgColor)
         : Color.mHover;
@@ -106,7 +107,7 @@ Item {
         width: Style.toOdd(root.baseItemSize * 0.25)
         height: 4
         radius: Math.min(Style.radiusXXS, width / 2)
-        color: root.isFocused ? Color.mPrimary : (hover.hovered ? Color.mHover : "transparent")
+        color: root.isFocused ? Color.mPrimary : (root.isHovered ? Color.mHover : "transparent")
         Behavior on color { ColorAnimation { duration: Style.animationFast } }
       }
     }
@@ -122,7 +123,7 @@ Item {
       verticalAlignment: Text.AlignVCenter
       horizontalAlignment: Text.AlignLeft
       pointSize: root.barFontSize
-      color: (hover.hovered || root.isFocused)
+      color: (root.isHovered || root.isFocused)
         ? (root.titleFocusedColor !== "none" ? Color.resolveColorKey(root.titleFocusedColor) : Color.mOnHover)
         : (root.titleDefaultColor !== "none" ? Color.resolveColorKey(root.titleDefaultColor) : Color.mOnSurface)
     }
@@ -135,21 +136,33 @@ Item {
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     preventStealing: true
 
+    onContainsMouseChanged: {
+      root.isHovered = containsMouse;
+    }
+
     onPressed: mouse => {
       if (mouse.button === Qt.LeftButton) {
         if (root.window)
           CompositorService.focusWindow(root.window);
         else if (root.pinnedAppId)
           root.entryClicked();
-      } else if (mouse.button === Qt.RightButton) {
-        TooltipService.hide();
-        root.entryRightClicked(root);
       }
     }
 
     onEntered: {
-      TooltipService.show(root, root.title, BarService.getTooltipDirection(null));
+      TooltipService.show(root, root.title, BarService.getTooltipDirection(root.screenName));
     }
-    onExited: TooltipService.hide()
+
+    onExited: {
+      TooltipService.hide(root);
+    }
+
+    onReleased: mouse => {
+      if (mouse.button === Qt.RightButton) {
+        mouse.accepted = true;
+        TooltipService.hide(root);
+        root.entryRightClicked(root);
+      }
+    }
   }
 }

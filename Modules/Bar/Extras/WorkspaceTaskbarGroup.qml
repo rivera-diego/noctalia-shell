@@ -30,6 +30,7 @@ Item {
   required property string entryBgColor
   required property string titleFocusedColor
   required property string titleDefaultColor
+  required property string screenName
 
   // Workspace visuals
   required property real groupedBorderOpacity
@@ -180,6 +181,7 @@ Item {
           entryBgColor: root.entryBgColor
           titleFocusedColor: root.titleFocusedColor
           titleDefaultColor: root.titleDefaultColor
+          screenName: root.screenName
           iconRevision: root.iconRevision
           onEntryClicked: {}
           onEntryRightClicked: function(item) {
@@ -211,6 +213,7 @@ Item {
           entryBgColor: root.entryBgColor
           titleFocusedColor: root.titleFocusedColor
           titleDefaultColor: root.titleDefaultColor
+          screenName: root.screenName
           iconRevision: root.iconRevision
           onEntryClicked: {}
           onEntryRightClicked: function(item) {

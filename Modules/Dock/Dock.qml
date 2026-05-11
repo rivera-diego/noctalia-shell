@@ -862,7 +862,7 @@ Loader {
           readonly property real slideY: dockPosition === "top" ? -slideOffset : dockPosition === "bottom" ? slideOffset : 0
 
           // Blur behind dock — offset by slide so it follows the content
-          BackgroundEffect.blurRegion: Settings.data.general.enableBlurBehind ? dockBlurRegion : null
+          BackgroundEffect.blurRegion: (Settings.data.general.enableBlurBehind && Settings.data.dock.backgroundOpacity > 0.01) ? dockBlurRegion : null
           Region {
             id: dockBlurRegion
             Region {
@@ -874,11 +874,14 @@ Loader {
             }
           }
 
+          // Add padding for the hover jump animation so it isn't clipped by Wayland bounds
+          property int jumpPadding: dockApps.length > 0 ? Math.ceil(Settings.data.dock.iconSize * 0.3) : 0
+
           // Window sized to fit content + slide distance so content can slide off-edge.
           // When auto-hide is disabled, slideDistance is 0 so the window (and thus
-          // the exclusion zone) matches the dock content size.
-          implicitWidth: dockContainerWrapper.width + (isVertical ? slideDistance : 0)
-          implicitHeight: dockContainerWrapper.height + (!isVertical ? slideDistance : 0)
+          // the exclusion zone) matches the dock content size + jump padding.
+          implicitWidth: dockContainerWrapper.width + (isVertical ? slideDistance + jumpPadding : 0)
+          implicitHeight: dockContainerWrapper.height + (!isVertical ? slideDistance + jumpPadding : 0)
 
           // Position based on dock setting
           anchors.top: dockPosition === "top"
@@ -887,10 +890,10 @@ Loader {
           anchors.right: dockPosition === "right"
 
           // Static margins — no animation, window stays put
-          margins.top: dockPosition === "top" ? (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginVertical : 0) + floatingMargin : floatingMargin) : 0
-          margins.bottom: dockPosition === "bottom" ? (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginVertical : 0) + floatingMargin : floatingMargin) : 0
-          margins.left: dockPosition === "left" ? (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginHorizontal : 0) + floatingMargin : floatingMargin) : 0
-          margins.right: dockPosition === "right" ? (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginHorizontal : 0) + floatingMargin : floatingMargin) : 0
+          margins.top: dockPosition === "top" ? Math.max(0, (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginVertical : 0) + floatingMargin : floatingMargin)) : 0
+          margins.bottom: dockPosition === "bottom" ? Math.max(0, (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginVertical : 0) + floatingMargin : floatingMargin)) : 0
+          margins.left: dockPosition === "left" ? Math.max(0, (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginHorizontal : 0) + floatingMargin : floatingMargin)) : 0
+          margins.right: dockPosition === "right" ? Math.max(0, (barAtSameEdge && !exclusive ? barHeight + (barFloating ? Settings.data.bar.marginHorizontal : 0) + floatingMargin : floatingMargin)) : 0
 
           // Container wrapper for animations
           Item {
@@ -931,8 +934,8 @@ Loader {
               y: dockWindow.slideY
             }
 
-            // Enable layer caching to reduce GPU usage from continuous animations
-            layer.enabled: true
+            // Enable layer caching to reduce GPU usage from continuous animations, but disable it to allow icon popout
+            layer.enabled: false
 
             DockContent {
               id: dockContent

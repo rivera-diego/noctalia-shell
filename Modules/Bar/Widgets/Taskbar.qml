@@ -851,7 +851,24 @@ Item {
 
                   IconImage {
                     id: appIcon
-                    anchors.fill: parent
+                    width: parent.width
+                    height: parent.height
+
+                    y: taskbarItem.isFocused && !root.isVerticalBar ? -3 : 0
+                    x: taskbarItem.isFocused && root.isVerticalBar ? -3 : 0
+
+                    Behavior on y {
+                      NumberAnimation {
+                        duration: Style.animationFast
+                        easing.type: Easing.OutBack
+                      }
+                    }
+                    Behavior on x {
+                      NumberAnimation {
+                        duration: Style.animationFast
+                        easing.type: Easing.OutBack
+                      }
+                    }
 
                     source: ThemeIcons.iconForAppId(taskbarItem.modelData.appId)
                     smooth: true

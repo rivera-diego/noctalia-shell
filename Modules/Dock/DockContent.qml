@@ -38,8 +38,8 @@ Item {
     anchors.top: extraBottom > 0 ? parent.top : undefined
 
     radius: Style.radiusL
-    border.width: Style.borderS
-    border.color: Qt.alpha(Color.mOutline, (isAttachedMode ? 0 : Color.adaptiveOpacity(Settings.data.dock.backgroundOpacity)))
+    border.width: 0
+    border.color: "transparent"
 
     MouseArea {
       id: dockMouseArea
@@ -77,7 +77,7 @@ Item {
       contentWidth: dockLayout.implicitWidth
       contentHeight: dockLayout.implicitHeight
       anchors.centerIn: parent
-      clip: true
+      clip: false
 
       flickableDirection: dockRoot.isVertical ? Flickable.VerticalFlick : Flickable.HorizontalFlick
 
@@ -517,8 +517,8 @@ Item {
               Drag.hotSpot.y: height / 2
               Drag.keys: ["dock-app"]
 
-              z: (dockRoot.dragSourceIndex === index) ? 1000 : ((dragging ? 1000 : 0))
-              scale: dragging ? 1.1 : (appButton.hovered ? 1.15 : 1.0)
+              z: (dockRoot.dragSourceIndex === index) ? 1000 : ((dragging ? 1000 : (appButton.isActive ? 10 : 0)))
+              scale: dragging ? 1.1 : (appButton.isActive ? 1.15 : 1.0)
               Behavior on scale {
                 NumberAnimation {
                   duration: Style.animationNormal
@@ -550,6 +550,7 @@ Item {
                 }
               }
 
+              // shiftOffset is applied as a translate for drag operations
               transform: Translate {
                 x: !dockRoot.isVertical ? iconContainer.shiftOffset : 0
                 y: dockRoot.isVertical ? iconContainer.shiftOffset : 0
@@ -570,7 +571,25 @@ Item {
 
               IconImage {
                 id: appIcon
-                anchors.fill: parent
+                anchors.centerIn: parent
+                width: parent.width
+                height: parent.height
+                
+                anchors.verticalCenterOffset: dockRoot.isVertical ? 0 : (appButton.hovered && !iconContainer.dragging ? (dockRoot.dockPosition === "bottom" ? -dockRoot.iconSize * 0.2 : dockRoot.iconSize * 0.2) : 0)
+                anchors.horizontalCenterOffset: !dockRoot.isVertical ? 0 : (appButton.hovered && !iconContainer.dragging ? (dockRoot.dockPosition === "right" ? -dockRoot.iconSize * 0.2 : dockRoot.iconSize * 0.2) : 0)
+                
+                Behavior on anchors.verticalCenterOffset {
+                  NumberAnimation {
+                    duration: Style.animationFast
+                    easing.type: Easing.OutBack
+                  }
+                }
+                Behavior on anchors.horizontalCenterOffset {
+                  NumberAnimation {
+                    duration: Style.animationFast
+                    easing.type: Easing.OutBack
+                  }
+                }
                 source: {
                   dockRoot.iconRevision; // Force re-evaluation when revision changes
                   return dock.getAppIcon(modelData);
@@ -776,9 +795,9 @@ Item {
             // Active indicator - positioned at the edge of the delegate area
             Rectangle {
               visible: baseIndicatorVisible && !showGroupedIndicator
-              width: dockRoot.isVertical ? indicatorMargin * 0.6 : dockRoot.iconSize * 0.2
-              height: dockRoot.isVertical ? dockRoot.iconSize * 0.2 : indicatorMargin * 0.6
-              color: Color.mPrimary
+              width: dockRoot.isVertical ? dockRoot.indicatorThickness : Style.toOdd(dockRoot.iconSize * 0.25)
+              height: dockRoot.isVertical ? Style.toOdd(dockRoot.iconSize * 0.25) : dockRoot.indicatorThickness
+              color: appButton.isActive ? Color.mPrimary : Qt.alpha(Color.mOnSurfaceVariant, 0.4)
               radius: Style.radiusXS
 
               // Anchor to the edge facing the screen center
