@@ -791,22 +791,16 @@ Item {
             IconImage {
               id: groupedAppIcon
 
+              anchors.centerIn: parent
               width: parent.width
               height: parent.height
 
-              y: groupedTaskbarItem.isFocused && !root.isVertical ? -3 : 0
-              x: groupedTaskbarItem.isFocused && root.isVertical ? -3 : 0
-
-              Behavior on y {
+              scale: groupedTaskbarItem.isFocused ? 1.15 : 1.0
+              Behavior on scale {
                 NumberAnimation {
                   duration: Style.animationFast
                   easing.type: Easing.OutBack
-                }
-              }
-              Behavior on x {
-                NumberAnimation {
-                  duration: Style.animationFast
-                  easing.type: Easing.OutBack
+                  easing.overshoot: 1.2
                 }
               }
 

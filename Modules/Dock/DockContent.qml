@@ -495,7 +495,7 @@ Item {
           active: Settings.data.dock.showLauncherIcon && Settings.data.dock.launcherPosition === "start"
           visible: active
           sourceComponent: launcherButtonComponent
-          readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.18))
+          readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.22))
           width: active ? (dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize) : 0
           height: active ? (dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2) : 0
         }
@@ -506,8 +506,9 @@ Item {
           delegate: Item {
             id: appButton
             readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.18))
-            width: dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize
-            height: dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2
+            readonly property real hoverMargin: Math.ceil(dockRoot.iconSize * 0.22)
+            width: dockRoot.isVertical ? dockRoot.iconSize + hoverMargin * 2 : dockRoot.iconSize
+            height: dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + hoverMargin * 2
 
             // --- liveWindows: CompositorService window objects for this app ---
             // Same pattern as Workspace.qml's groupedContainer.liveWindows.
@@ -639,7 +640,7 @@ Item {
               Drag.keys: ["dock-app"]
 
               z: (dockRoot.dragSourceIndex === index) ? 1000 : ((dragging ? 1000 : (appButton.isActive ? 10 : 0)))
-              scale: dragging ? 1.1 : (appButton.isActive ? 1.30 : 1.0)
+              scale: dragging ? 1.1 : (appButton.isActive ? 1.15 : 0.9)
               Behavior on scale {
                 NumberAnimation {
                   duration: Style.animationNormal
@@ -1017,7 +1018,7 @@ Item {
           active: Settings.data.dock.showLauncherIcon && Settings.data.dock.launcherPosition === "end"
           visible: active
           sourceComponent: launcherButtonComponent
-          readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.18))
+          readonly property real indicatorMargin: Math.max(3, Math.round(dockRoot.iconSize * 0.22))
           width: active ? (dockRoot.isVertical ? dockRoot.iconSize + indicatorMargin * 2 : dockRoot.iconSize) : 0
           height: active ? (dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2) : 0
         }

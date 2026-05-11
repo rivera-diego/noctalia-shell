@@ -952,9 +952,10 @@ Loader {
             readonly property int contentWidth: dockContent.dockContainer.width + extraLeft + extraRight + 2
             readonly property int contentHeight: dockContent.dockContainer.height + extraTop + extraBottom + 2
 
-            // Add +2 buffer for fractional scaling issues
-            width: contentWidth
-            height: contentHeight
+            // Add jumpPadding so the hover-up animation isn't clipped by the wrapper bounds.
+            // The padding is added on the side facing the screen center (away from the dock edge).
+            width: contentWidth + (isVertical ? dockWindow.jumpPadding : 0)
+            height: contentHeight + (!isVertical ? dockWindow.jumpPadding : 0)
 
             anchors.horizontalCenter: isVertical ? undefined : parent.horizontalCenter
             anchors.verticalCenter: isVertical ? parent.verticalCenter : undefined
