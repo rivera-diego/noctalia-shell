@@ -22,8 +22,14 @@ Item {
   readonly property bool isAttachedMode: Settings.data.dock.dockType === "attached"
   readonly property string tooltipDirection: dockRoot.dockPosition === "left" ? "right" : (dockRoot.dockPosition === "right" ? "left" : (dockRoot.dockPosition === "top" ? "bottom" : "top"))
 
+  // Revision counter - incremented when CompositorService reports window list changes
+  // Used to force reactive re-evaluation of liveWindows in each app delegate
+  property int windowRevision: 0
+
+  // Wheel scroll state
   property int wheelAccumulatedDelta: 0
   property bool wheelCooldown: false
+
   Timer {
     id: wheelDebounce
     interval: 150
@@ -31,6 +37,17 @@ Item {
     onTriggered: {
       dockContentRoot.wheelCooldown = false;
       dockContentRoot.wheelAccumulatedDelta = 0;
+    }
+  }
+
+  // React to window list changes from the compositor
+  Connections {
+    target: CompositorService
+    function onWindowListChanged() {
+      dockContentRoot.windowRevision++;
+    }
+    function onActiveWindowChanged() {
+      dockContentRoot.windowRevision++;
     }
   }
 
@@ -131,68 +148,50 @@ Item {
         return ThemeIcons.iconForAppId(appData.appId?.toLowerCase());
       }
 
+      // ---------------------------------------------------------------
+      // getWindowsForApp: returns CompositorService window objects (with .id)
+      // for the given appId. These are the objects Workspace.qml passes
+      // directly to CompositorService.focusWindow().
+      // Results are sorted by screen X then Y (same as HyprlandService.toSortedWindowList).
+      // ---------------------------------------------------------------
+      function getWindowsForApp(appId) {
+        if (!appId || !CompositorService || !CompositorService.windows)
+          return [];
+
+        const normalized = appId.toLowerCase().trim();
+        const result = [];
+        for (let i = 0; i < CompositorService.windows.count; i++) {
+          const win = CompositorService.windows.get(i);
+          if (win && win.appId && win.appId.toLowerCase().trim() === normalized) {
+            result.push({
+                           id: win.id,
+                           title: win.title,
+                           appId: win.appId,
+                           isFocused: win.isFocused,
+                           workspaceId: win.workspaceId,
+                           x: win.x || 0,
+                           y: win.y || 0
+                         });
+          }
+        }
+
+        // Sort by position: X first, then Y (left-to-right, top-to-bottom)
+        result.sort((a, b) => {
+          if (a.x !== b.x) return a.x - b.x;
+          return a.y - b.y;
+        });
+
+        return result;
+      }
+
+      // Keep getValidToplevels for compatibility with existing code that uses
+      // Wayland toplevels (e.g. drag-and-drop, close via middle-click)
       function getValidToplevels(appData) {
         if (!appData || !ToplevelManager || !ToplevelManager.toplevels)
           return [];
         const source = appData.toplevels && appData.toplevels.length > 0 ? appData.toplevels : (appData.toplevel ? [appData.toplevel] : []);
         const allToplevels = ToplevelManager.toplevels.values || [];
-        const valid = source.filter(toplevel => toplevel && allToplevels.includes(toplevel));
-        
-        // Sort the windows by their physical screen position using CompositorService
-        const windowPositions = {};
-        if (typeof CompositorService !== 'undefined' && CompositorService.windows) {
-          for (let i = 0; i < CompositorService.windows.count; i++) {
-             const win = CompositorService.windows.get(i);
-             if (win && win.id) {
-               // In HyprlandService, address is saved as the id without 0x prefix sometimes, but let's compare loosely
-               let winId = win.id.toLowerCase();
-               if (winId.startsWith("0x")) winId = winId.substring(2);
-               windowPositions[winId] = i; 
-             }
-          }
-        }
-        
-        return valid.sort((a, b) => {
-           let aId = (a.address || "").toLowerCase();
-           if (aId.startsWith("0x")) aId = aId.substring(2);
-           
-           let bId = (b.address || "").toLowerCase();
-           if (bId.startsWith("0x")) bId = bId.substring(2);
-           
-           const aPos = windowPositions[aId] !== undefined ? windowPositions[aId] : 9999;
-           const bPos = windowPositions[bId] !== undefined ? windowPositions[bId] : 9999;
-           return aPos - bPos;
-        });
-      }
-
-      function getPrimaryToplevel(appData) {
-        const toplevels = getValidToplevels(appData);
-        if (toplevels.length === 0)
-          return null;
-        if (ToplevelManager && ToplevelManager.activeToplevel && toplevels.includes(ToplevelManager.activeToplevel))
-          return ToplevelManager.activeToplevel;
-        return toplevels[0];
-      }
-
-      // Focus a Wayland toplevel via CompositorService (no cursor warp).
-      // Wayland toplevels have .address ("0x1a2b...") but CompositorService.focusWindow
-      // expects an object with .id (the hex string WITHOUT the leading "0x").
-      function focusToplevel(toplevel) {
-        if (!toplevel) {
-          Logger.w("Dock", "focusToplevel: toplevel is null");
-          return;
-        }
-        const addr = toplevel.address || "";
-        Logger.d("Dock", "focusToplevel: address=" + addr + " activated=" + toplevel.activated + " appId=" + (toplevel.appId || "?"));
-        // Strip leading 0x if present
-        const id = addr.startsWith("0x") ? addr.substring(2) : addr;
-        if (!id) {
-          Logger.w("Dock", "focusToplevel: no address, fallback to native activate()");
-          if (toplevel.activate) toplevel.activate();
-          return;
-        }
-        Logger.d("Dock", "focusToplevel: calling CompositorService.focusWindow with id=" + id);
-        CompositorService.focusWindow({ id: id });
+        return source.filter(toplevel => toplevel && allToplevels.includes(toplevel));
       }
 
       function launchAppById(appId) {
@@ -482,36 +481,101 @@ Item {
             Layout.preferredHeight: dockRoot.isVertical ? dockRoot.iconSize : dockRoot.iconSize + indicatorMargin * 2
             Layout.alignment: Qt.AlignCenter
 
+            // --- liveWindows: CompositorService window objects for this app ---
+            // Same pattern as Workspace.qml's groupedContainer.liveWindows.
+            // These objects have .id, .isFocused, .x, .y and can be passed
+            // DIRECTLY to CompositorService.focusWindow().
+            property var liveWindows: []
+
+            function updateLiveWindows() {
+              if (!modelData || !modelData.appId) {
+                liveWindows = [];
+                return;
+              }
+              liveWindows = dock.getWindowsForApp(modelData.appId);
+            }
+
+            Component.onCompleted: Qt.callLater(updateLiveWindows)
+
+            Connections {
+              target: dockContentRoot
+              function onWindowRevisionChanged() {
+                Qt.callLater(appButton.updateLiveWindows);
+              }
+            }
+
+            // Keep Wayland toplevels for drag-and-drop and close (middle click)
             property var toplevels: dock.getValidToplevels(modelData)
-            property bool isActive: ToplevelManager && ToplevelManager.activeToplevel && toplevels.includes(ToplevelManager.activeToplevel)
+            property bool isActive: liveWindows.some(w => w.isFocused)
             property bool hovered: appMouseArea.containsMouse
             property string appId: modelData ? modelData.appId : ""
-            property int groupedCount: toplevels.length
+            property int groupedCount: liveWindows.length
             property int focusedWindowIndex: {
-              if (!ToplevelManager || !ToplevelManager.activeToplevel)
-                return -1;
-              return toplevels.indexOf(ToplevelManager.activeToplevel);
+              for (let i = 0; i < liveWindows.length; i++) {
+                if (liveWindows[i].isFocused) return i;
+              }
+              return -1;
             }
             property string groupedIndicatorText: focusedWindowIndex >= 0 ? (focusedWindowIndex + 1) + "/" + groupedCount : groupedCount.toString()
             property string appTitle: {
               if (!modelData)
                 return "";
-              const primaryToplevel = dock.getPrimaryToplevel(modelData);
-              if (primaryToplevel) {
-                const toplevelTitle = primaryToplevel.title || "";
-                // If title is "Loading..." or empty, use desktop entry name
-                if (!toplevelTitle || toplevelTitle === "Loading..." || toplevelTitle.trim() === "") {
-                  return dockRoot.getAppNameFromDesktopEntry(modelData.appId) || modelData.appId;
+              // Use focused window title first
+              for (let i = 0; i < liveWindows.length; i++) {
+                if (liveWindows[i].isFocused && liveWindows[i].title && liveWindows[i].title !== "Loading...") {
+                  return liveWindows[i].title;
                 }
-                return toplevelTitle;
               }
-              // For pinned apps that aren't running, use the stored title
-              return modelData.title || modelData.appId || "";
+              // Fallback to first window title
+              if (liveWindows.length > 0 && liveWindows[0].title) {
+                return liveWindows[0].title;
+              }
+              return dockRoot.getAppNameFromDesktopEntry(modelData.appId) || modelData.title || modelData.appId || "";
             }
-            property bool isRunning: toplevels.length > 0
+            property bool isRunning: liveWindows.length > 0
             readonly property bool baseIndicatorVisible: Settings.data.dock.inactiveIndicators ? isRunning : isActive
-            // Grouped indicators should be visible whenever grouped windows are running, even if none is focused.
             readonly property bool showGroupedIndicator: Settings.data.dock.groupApps && groupedCount > 1 && isRunning
+
+            // WheelHandler at the Item level - NOT inside the Flickable.
+            // This is the same technique Workspace.qml uses: a top-level WheelHandler
+            // that grabs events before the Flickable scrolling does.
+            WheelHandler {
+              target: appButton
+              acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+              onWheel: function(event) {
+                if (appButton.liveWindows.length <= 1) {
+                  event.accepted = false;
+                  return;
+                }
+
+                if (dockContentRoot.wheelCooldown) {
+                  event.accepted = true;
+                  return;
+                }
+
+                var dy = event.angleDelta.y, dx = event.angleDelta.x;
+                var delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
+                dockContentRoot.wheelAccumulatedDelta += delta;
+
+                if (Math.abs(dockContentRoot.wheelAccumulatedDelta) >= 120) {
+                  var dir = dockContentRoot.wheelAccumulatedDelta > 0 ? -1 : 1;
+                  if (Settings.data.general.reverseScroll) dir *= -1;
+
+                  const wins = appButton.liveWindows;
+                  const activeIdx = appButton.focusedWindowIndex;
+                  let nextIdx = activeIdx >= 0
+                    ? (activeIdx + dir + wins.length) % wins.length
+                    : (dir > 0 ? 0 : wins.length - 1);
+
+                  CompositorService.focusWindow(wins[nextIdx]);
+
+                  dockContentRoot.wheelCooldown = true;
+                  wheelDebounce.restart();
+                  dockContentRoot.wheelAccumulatedDelta = 0;
+                  event.accepted = true;
+                }
+              }
+            }
 
             // Store index for drag-and-drop
             property int modelIndex: index
@@ -749,45 +813,6 @@ Item {
               drag.target: iconContainer
               drag.axis: (pressedButtons & Qt.LeftButton) ? (dockRoot.isVertical ? Drag.YAxis : Drag.XAxis) : Drag.None
 
-              onWheel: function(wheel) {
-                const runningToplevels = appButton.toplevels;
-                if (!runningToplevels || runningToplevels.length <= 1) {
-                  wheel.accepted = false;
-                  return;
-                }
-                
-                if (dockContentRoot.wheelCooldown) {
-                  wheel.accepted = true;
-                  return;
-                }
-                
-                var dy = wheel.angleDelta.y, dx = wheel.angleDelta.x;
-                var delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
-                dockContentRoot.wheelAccumulatedDelta += delta;
-                
-                if (Math.abs(dockContentRoot.wheelAccumulatedDelta) >= 120) {
-                  var dir = dockContentRoot.wheelAccumulatedDelta > 0 ? -1 : 1;
-                  if (Settings.data.general.reverseScroll) dir *= -1;
-                  
-                  const activeIndex = appButton.focusedWindowIndex;
-                  let nextIndex = 0;
-                  if (activeIndex >= 0) {
-                    nextIndex = (activeIndex + dir + runningToplevels.length) % runningToplevels.length;
-                  } else {
-                    nextIndex = dir > 0 ? 0 : runningToplevels.length - 1;
-                  }
-                  
-                  const targetToplevel = runningToplevels[nextIndex];
-                  if (targetToplevel) {
-                     dock.focusToplevel(targetToplevel);
-                  }
-                  
-                  dockContentRoot.wheelCooldown = true;
-                  wheelDebounce.restart();
-                  dockContentRoot.wheelAccumulatedDelta = 0;
-                }
-                wheel.accepted = true;
-              }
 
               onPressed: {
                 var p1 = appButton.mapFromItem(dockContainer, 0, 0);
@@ -850,8 +875,8 @@ Item {
                            // Close any existing context menu for non-right-click actions
                            dockRoot.closeAllContextMenus();
 
-                           const runningToplevels = dock.getValidToplevels(modelData);
-                           const primaryToplevel = dock.getPrimaryToplevel(modelData);
+                           const wins = appButton.liveWindows;
+                           const primaryToplevel = dock.getPrimaryToplevel(modelData); // for close (middle click)
 
                            if (mouse.button === Qt.MiddleButton) {
                              if (primaryToplevel && primaryToplevel.close) {
@@ -859,15 +884,14 @@ Item {
                                Qt.callLater(dockRoot.updateDockApps);
                              }
                            } else if (mouse.button === Qt.LeftButton) {
-                             if (runningToplevels.length === 0) {
+                             if (wins.length === 0) {
                                dock.launchAppById(modelData?.appId);
                                return;
                              }
 
-                             if (!Settings.data.dock.groupApps || runningToplevels.length <= 1) {
-                               if (primaryToplevel) {
-                                 dock.focusToplevel(primaryToplevel);
-                               }
+                             if (!Settings.data.dock.groupApps || wins.length <= 1) {
+                               // Single window: focus directly with no warp
+                               CompositorService.focusWindow(wins[0]);
                                return;
                              }
 
@@ -875,17 +899,13 @@ Item {
                              if (clickAction === "list") {
                                const targetScreen = dockRoot.modelData || dockRoot.screen || null;
                                TooltipService.hideImmediately();
-                               // Left-click list should always open the grouped window list view.
                                contextMenu.show(appButton, modelData, targetScreen, "list");
                              } else {
                                const appKey = modelData?.appId || "";
                                const state = dockRoot.groupCycleIndices || {};
-                               const nextIndex = (state[appKey] || 0) % runningToplevels.length;
-                               const nextToplevel = runningToplevels[nextIndex];
-                               if (nextToplevel) {
-                                 dock.focusToplevel(nextToplevel);
-                               }
-                               state[appKey] = (nextIndex + 1) % runningToplevels.length;
+                               const nextIndex = (state[appKey] || 0) % wins.length;
+                               CompositorService.focusWindow(wins[nextIndex]);
+                               state[appKey] = (nextIndex + 1) % wins.length;
                                dockRoot.groupCycleIndices = Object.assign({}, state);
                              }
                            }
