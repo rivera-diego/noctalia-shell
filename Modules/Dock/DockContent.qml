@@ -174,6 +174,27 @@ Item {
         return toplevels[0];
       }
 
+      // Focus a Wayland toplevel via CompositorService (no cursor warp).
+      // Wayland toplevels have .address ("0x1a2b...") but CompositorService.focusWindow
+      // expects an object with .id (the hex string WITHOUT the leading "0x").
+      function focusToplevel(toplevel) {
+        if (!toplevel) {
+          Logger.w("Dock", "focusToplevel: toplevel is null");
+          return;
+        }
+        const addr = toplevel.address || "";
+        Logger.d("Dock", "focusToplevel: address=" + addr + " activated=" + toplevel.activated + " appId=" + (toplevel.appId || "?"));
+        // Strip leading 0x if present
+        const id = addr.startsWith("0x") ? addr.substring(2) : addr;
+        if (!id) {
+          Logger.w("Dock", "focusToplevel: no address, fallback to native activate()");
+          if (toplevel.activate) toplevel.activate();
+          return;
+        }
+        Logger.d("Dock", "focusToplevel: calling CompositorService.focusWindow with id=" + id);
+        CompositorService.focusWindow({ id: id });
+      }
+
       function launchAppById(appId) {
         if (!appId)
           return;
@@ -758,7 +779,7 @@ Item {
                   
                   const targetToplevel = runningToplevels[nextIndex];
                   if (targetToplevel) {
-                     CompositorService.focusWindow({ id: targetToplevel.address || targetToplevel.id });
+                     dock.focusToplevel(targetToplevel);
                   }
                   
                   dockContentRoot.wheelCooldown = true;
@@ -845,7 +866,7 @@ Item {
 
                              if (!Settings.data.dock.groupApps || runningToplevels.length <= 1) {
                                if (primaryToplevel) {
-                                 CompositorService.focusWindow({ id: primaryToplevel.address || primaryToplevel.id });
+                                 dock.focusToplevel(primaryToplevel);
                                }
                                return;
                              }
@@ -862,7 +883,7 @@ Item {
                                const nextIndex = (state[appKey] || 0) % runningToplevels.length;
                                const nextToplevel = runningToplevels[nextIndex];
                                if (nextToplevel) {
-                                 CompositorService.focusWindow({ id: nextToplevel.address || nextToplevel.id });
+                                 dock.focusToplevel(nextToplevel);
                                }
                                state[appKey] = (nextIndex + 1) % runningToplevels.length;
                                dockRoot.groupCycleIndices = Object.assign({}, state);
