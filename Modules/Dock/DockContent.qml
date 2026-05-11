@@ -520,7 +520,15 @@ Item {
                 liveWindows = [];
                 return;
               }
-              liveWindows = dock.getWindowsForApp(modelData.appId);
+              const all = dock.getWindowsForApp(modelData.appId);
+              // When groupApps is off, each delegate has one specific toplevel.
+              // Use the window object stored directly in modelData if available,
+              // otherwise fall back to matching all windows for this appId.
+              if (!Settings.data.dock.groupApps && modelData.window) {
+                liveWindows = [modelData.window];
+              } else {
+                liveWindows = all;
+              }
             }
 
             Component.onCompleted: Qt.callLater(updateLiveWindows)
@@ -631,7 +639,7 @@ Item {
               Drag.keys: ["dock-app"]
 
               z: (dockRoot.dragSourceIndex === index) ? 1000 : ((dragging ? 1000 : (appButton.isActive ? 10 : 0)))
-              scale: dragging ? 1.1 : (appButton.isActive ? 1.15 : 1.0)
+              scale: dragging ? 1.1 : (appButton.isActive ? 1.30 : 1.0)
               Behavior on scale {
                 NumberAnimation {
                   duration: Style.animationNormal
@@ -687,10 +695,10 @@ Item {
                 anchors.centerIn: parent
                 width: parent.width
                 height: parent.height
-                
+
                 anchors.verticalCenterOffset: dockRoot.isVertical ? 0 : (appButton.hovered && !iconContainer.dragging ? (dockRoot.dockPosition === "bottom" ? -dockRoot.iconSize * 0.2 : dockRoot.iconSize * 0.2) : 0)
                 anchors.horizontalCenterOffset: !dockRoot.isVertical ? 0 : (appButton.hovered && !iconContainer.dragging ? (dockRoot.dockPosition === "right" ? -dockRoot.iconSize * 0.2 : dockRoot.iconSize * 0.2) : 0)
-                
+
                 Behavior on anchors.verticalCenterOffset {
                   NumberAnimation {
                     duration: Style.animationFast

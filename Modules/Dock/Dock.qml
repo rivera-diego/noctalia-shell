@@ -244,34 +244,21 @@ Loader {
       }
 
       function sortDockApps(apps) {
-        // Sort running apps by their physical position on screen (from CompositorService.windows).
-        // This matches the behavior of the Workspace widget — icons appear in the same order
-        // as the windows in the Hyprland scrolling layout (left-to-right, top-to-bottom).
-        // Pinned-but-not-running apps are placed at the end.
-
-        // Build a lookup: appId (normalized) -> minimum window index in CompositorService.windows
-        const positionMap = {};
+        // Sort by the position index of each entry's window in CompositorService.windows.
+        // windows[] is already sorted by workspace+x+y, so the index = physical position.
+        // Each entry has app.window pre-assigned (resolveWindowRefs runs before this),
+        // giving independent positions to multiple instances of the same app.
+        const positionById = {};
         if (typeof CompositorService !== 'undefined' && CompositorService.windows) {
           for (let i = 0; i < CompositorService.windows.count; i++) {
             const win = CompositorService.windows.get(i);
-            if (win && win.appId) {
-              const key = win.appId.toLowerCase().trim();
-              if (positionMap[key] === undefined) {
-                positionMap[key] = i;  // First occurrence = leftmost window
-              }
-            }
+            if (win && win.id) positionById[win.id] = i;
           }
         }
-
         return [...apps].sort((a, b) => {
-          const aId = (a.appId || "").toLowerCase().trim();
-          const bId = (b.appId || "").toLowerCase().trim();
-          const aPos = positionMap[aId] !== undefined ? positionMap[aId] : 99999;
-          const bPos = positionMap[bId] !== undefined ? positionMap[bId] : 99999;
-          // Running apps sorted by position; non-running (pinned only) go to the end
-          if (aPos !== bPos) return aPos - bPos;
-          // Tie-break: preserve original array order
-          return 0;
+          const aPos = a.window ? (positionById[a.window.id] ?? 99999) : 99999;
+          const bPos = b.window ? (positionById[b.window.id] ?? 99999) : 99999;
+          return aPos - bPos;
         });
       }
 
@@ -507,7 +494,8 @@ Loader {
                             "toplevel": toplevel,
                             "toplevels": toplevel ? [toplevel] : [],
                             "appId": canonicalId,
-                            "title": title
+                            "title": title,
+                            "window": null  // resolved in resolveWindowRefs() after combined is built
                           });
             processedToplevels.add(toplevel);
           } else {
@@ -575,6 +563,52 @@ Loader {
         } else {
           pushRunning(true);
           pushPinned();
+        }
+
+        // Resolve window refs: match each entry to its CompositorService window object.
+        // Filter windows by this dock's screen output (same logic as onlySameOutput)
+        // so the Nth dolphin on THIS monitor matches the Nth dolphin in windowQueues.
+        if (CompositorService && CompositorService.windows) {
+          const screenName = modelData ? modelData.name : "";
+          const windowQueues = {};
+          for (let wi = 0; wi < CompositorService.windows.count; wi++) {
+            const cw = CompositorService.windows.get(wi);
+            if (!cw || !cw.appId) continue;
+            // Filter by output when onlySameOutput is enabled
+            if (Settings.data.dock.onlySameOutput && screenName && cw.output && cw.output !== screenName) continue;
+            const k = cw.appId.toLowerCase().trim();
+            if (!windowQueues[k]) windowQueues[k] = [];
+            windowQueues[k].push(cw);
+          }
+          // Sort combined by workspaceId+x+y to match CompositorService.windows order
+          // (toSortedWindowList uses workspaceId -> x -> y)
+          combined.sort((a, b) => {
+            if (!a.toplevel && !b.toplevel) return 0;
+            if (!a.toplevel) return 1;
+            if (!b.toplevel) return -1;
+            const aWs = a.toplevel.workspace ? (a.toplevel.workspace.id || 0) : 0;
+            const bWs = b.toplevel.workspace ? (b.toplevel.workspace.id || 0) : 0;
+            if (aWs !== bWs) return aWs - bWs;
+            // Use x,y from the window object in windowQueues if available,
+            // otherwise fall back to lastIpcObject
+            const aIpc = a.toplevel.lastIpcObject;
+            const bIpc = b.toplevel.lastIpcObject;
+            const ax = aIpc && aIpc.at ? aIpc.at[0] : 0;
+            const ay = aIpc && aIpc.at ? aIpc.at[1] : 0;
+            const bx = bIpc && bIpc.at ? bIpc.at[0] : 0;
+            const by = bIpc && bIpc.at ? bIpc.at[1] : 0;
+            if (ax !== bx) return ax - bx;
+            return ay - by;
+          });
+          const consumed = {};
+          combined.forEach(app => {
+            if (!app.toplevel) return;
+            const k = (app.appId || "").toLowerCase().trim();
+            if (!windowQueues[k]) return;
+            if (!consumed[k]) consumed[k] = 0;
+            app.window = windowQueues[k][consumed[k]] || null;
+            consumed[k]++;
+          });
         }
 
         const sortedApps = sortDockApps(combined);
