@@ -244,33 +244,35 @@ Loader {
       }
 
       function sortDockApps(apps) {
-        if (!sessionAppOrder || sessionAppOrder.length === 0) {
-          return apps;
-        }
+        // Sort running apps by their physical position on screen (from CompositorService.windows).
+        // This matches the behavior of the Workspace widget — icons appear in the same order
+        // as the windows in the Hyprland scrolling layout (left-to-right, top-to-bottom).
+        // Pinned-but-not-running apps are placed at the end.
 
-        const sorted = [];
-        const remaining = [...apps];
-
-        // Pick apps that are in the session order
-        for (let i = 0; i < sessionAppOrder.length; i++) {
-          const key = sessionAppOrder[i];
-
-          // Pick ALL matching apps (e.g. all instances of a pinned app)
-          while (true) {
-            const idx = remaining.findIndex(app => getAppKey(app) === key);
-            if (idx !== -1) {
-              sorted.push(remaining[idx]);
-              remaining.splice(idx, 1);
-            } else {
-              break;
+        // Build a lookup: appId (normalized) -> minimum window index in CompositorService.windows
+        const positionMap = {};
+        if (typeof CompositorService !== 'undefined' && CompositorService.windows) {
+          for (let i = 0; i < CompositorService.windows.count; i++) {
+            const win = CompositorService.windows.get(i);
+            if (win && win.appId) {
+              const key = win.appId.toLowerCase().trim();
+              if (positionMap[key] === undefined) {
+                positionMap[key] = i;  // First occurrence = leftmost window
+              }
             }
           }
         }
 
-        // Append any new/remaining apps
-        remaining.forEach(app => sorted.push(app));
-
-        return sorted;
+        return [...apps].sort((a, b) => {
+          const aId = (a.appId || "").toLowerCase().trim();
+          const bId = (b.appId || "").toLowerCase().trim();
+          const aPos = positionMap[aId] !== undefined ? positionMap[aId] : 99999;
+          const bPos = positionMap[bId] !== undefined ? positionMap[bId] : 99999;
+          // Running apps sorted by position; non-running (pinned only) go to the end
+          if (aPos !== bPos) return aPos - bPos;
+          // Tie-break: preserve original array order
+          return 0;
+        });
       }
 
       function reorderApps(fromIndex, toIndex) {
