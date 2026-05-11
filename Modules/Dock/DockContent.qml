@@ -260,16 +260,13 @@ Item {
         }
       }
 
-      // Flow layout enables smooth move transitions when icons reorder.
-      // GridLayout doesn't support move/displaced transitions — Flow does.
-      Flow {
+      // Grid positioner: supports move transitions for smooth icon reordering
+      // and avoids Flow's wrapping problem.
+      Grid {
         id: dockLayout
-        flow: dockRoot.isVertical ? Flow.TopToBottom : Flow.LeftToRight
+        // Horizontal: many columns (single row). Vertical: 1 column (single column).
+        columns: dockRoot.isVertical ? 1 : 100
         spacing: Style.marginS
-
-        // Ensure the layout takes its full implicit size
-        width: implicitWidth
-        height: implicitHeight
 
         // Smooth slide animation when icons swap positions
         move: Transition {
