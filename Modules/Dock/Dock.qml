@@ -33,13 +33,10 @@ Loader {
         }
       }
 
-      // Update dock apps when window list or active window changes
+      // Update dock apps when window list change
       Connections {
         target: CompositorService
         function onWindowListChanged() {
-          updateDockApps();
-        }
-        function onActiveWindowChanged() {
           updateDockApps();
         }
       }
@@ -251,47 +248,29 @@ Loader {
         // This matches the behavior of the Workspace widget — icons appear in the same order
         // as the windows in the Hyprland scrolling layout (left-to-right, top-to-bottom).
         // Pinned-but-not-running apps are placed at the end.
-        //
-        // Each dock entry's toplevel.address corresponds to CompositorService.windows[i].id.
-        // This ensures multiple instances of the same app are sorted independently.
 
-        // Build lookup: window id -> index in CompositorService.windows
-        const positionById = {};
+        // Build a lookup: appId (normalized) -> minimum window index in CompositorService.windows
+        const positionMap = {};
         if (typeof CompositorService !== 'undefined' && CompositorService.windows) {
           for (let i = 0; i < CompositorService.windows.count; i++) {
             const win = CompositorService.windows.get(i);
-            if (win && win.id) {
-              positionById[win.id] = i;
-            }
-          }
-        }
-
-        // Helper: get the best position for a dock entry
-        function getPosition(app) {
-          // Try matching the primary toplevel's address to a CompositorService window id
-          if (app.toplevel && app.toplevel.address) {
-            const addr = app.toplevel.address;
-            if (positionById[addr] !== undefined) return positionById[addr];
-          }
-          // For grouped apps with multiple toplevels, use the minimum (leftmost) position
-          if (app.toplevels && app.toplevels.length > 0) {
-            let minPos = 99999;
-            for (let j = 0; j < app.toplevels.length; j++) {
-              const tl = app.toplevels[j];
-              if (tl && tl.address && positionById[tl.address] !== undefined) {
-                minPos = Math.min(minPos, positionById[tl.address]);
+            if (win && win.appId) {
+              const key = win.appId.toLowerCase().trim();
+              if (positionMap[key] === undefined) {
+                positionMap[key] = i;  // First occurrence = leftmost window
               }
             }
-            if (minPos < 99999) return minPos;
           }
-          // Non-running (pinned only) go to the end
-          return 99999;
         }
 
         return [...apps].sort((a, b) => {
-          const aPos = getPosition(a);
-          const bPos = getPosition(b);
+          const aId = (a.appId || "").toLowerCase().trim();
+          const bId = (b.appId || "").toLowerCase().trim();
+          const aPos = positionMap[aId] !== undefined ? positionMap[aId] : 99999;
+          const bPos = positionMap[bId] !== undefined ? positionMap[bId] : 99999;
+          // Running apps sorted by position; non-running (pinned only) go to the end
           if (aPos !== bPos) return aPos - bPos;
+          // Tie-break: preserve original array order
           return 0;
         });
       }
@@ -598,8 +577,8 @@ Loader {
           pushPinned();
         }
 
-        const grouped = buildGroupedDockApps(combined);
-        dockApps = sortDockApps(grouped);
+        const sortedApps = sortDockApps(combined);
+        dockApps = buildGroupedDockApps(sortedApps);
         const cycleState = root.groupCycleIndices || {};
         const nextCycleState = {};
         dockApps.forEach(app => {

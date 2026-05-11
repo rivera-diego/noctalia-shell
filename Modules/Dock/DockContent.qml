@@ -520,18 +520,7 @@ Item {
                 liveWindows = [];
                 return;
               }
-
-              const allWins = dock.getWindowsForApp(modelData.appId);
-
-              // If this dock entry represents a specific toplevel (ungrouped mode or
-              // individual instance), only include THAT window — not all of the same appId.
-              // This prevents 2 Dolphin icons from both showing as "active" when only one is focused.
-              if (modelData.toplevel && modelData.toplevel.address && !Settings.data.dock.groupApps) {
-                const addr = modelData.toplevel.address;
-                liveWindows = allWins.filter(w => w.id === addr);
-              } else {
-                liveWindows = allWins;
-              }
+              liveWindows = dock.getWindowsForApp(modelData.appId);
             }
 
             Component.onCompleted: Qt.callLater(updateLiveWindows)
