@@ -12,6 +12,7 @@ import qs.Services.UI
 import qs.Widgets
 
 Item {
+  id: dockContentRoot
   required property var dockRoot
   required property int extraTop
   required property int extraBottom
@@ -20,6 +21,18 @@ Item {
   property alias dockContainer: dockContainer
   readonly property bool isAttachedMode: Settings.data.dock.dockType === "attached"
   readonly property string tooltipDirection: dockRoot.dockPosition === "left" ? "right" : (dockRoot.dockPosition === "right" ? "left" : (dockRoot.dockPosition === "top" ? "bottom" : "top"))
+
+  property int wheelAccumulatedDelta: 0
+  property bool wheelCooldown: false
+  Timer {
+    id: wheelDebounce
+    interval: 150
+    repeat: false
+    onTriggered: {
+      dockContentRoot.wheelCooldown = false;
+      dockContentRoot.wheelAccumulatedDelta = 0;
+    }
+  }
 
   Rectangle {
     id: dockContainer
@@ -123,7 +136,33 @@ Item {
           return [];
         const source = appData.toplevels && appData.toplevels.length > 0 ? appData.toplevels : (appData.toplevel ? [appData.toplevel] : []);
         const allToplevels = ToplevelManager.toplevels.values || [];
-        return source.filter(toplevel => toplevel && allToplevels.includes(toplevel));
+        const valid = source.filter(toplevel => toplevel && allToplevels.includes(toplevel));
+        
+        // Sort the windows by their physical screen position using CompositorService
+        const windowPositions = {};
+        if (typeof CompositorService !== 'undefined' && CompositorService.windows) {
+          for (let i = 0; i < CompositorService.windows.count; i++) {
+             const win = CompositorService.windows.get(i);
+             if (win && win.id) {
+               // In HyprlandService, address is saved as the id without 0x prefix sometimes, but let's compare loosely
+               let winId = win.id.toLowerCase();
+               if (winId.startsWith("0x")) winId = winId.substring(2);
+               windowPositions[winId] = i; 
+             }
+          }
+        }
+        
+        return valid.sort((a, b) => {
+           let aId = (a.address || "").toLowerCase();
+           if (aId.startsWith("0x")) aId = aId.substring(2);
+           
+           let bId = (b.address || "").toLowerCase();
+           if (bId.startsWith("0x")) bId = bId.substring(2);
+           
+           const aPos = windowPositions[aId] !== undefined ? windowPositions[aId] : 9999;
+           const bPos = windowPositions[bId] !== undefined ? windowPositions[bId] : 9999;
+           return aPos - bPos;
+        });
       }
 
       function getPrimaryToplevel(appData) {
@@ -689,6 +728,46 @@ Item {
               drag.target: iconContainer
               drag.axis: (pressedButtons & Qt.LeftButton) ? (dockRoot.isVertical ? Drag.YAxis : Drag.XAxis) : Drag.None
 
+              onWheel: function(wheel) {
+                const runningToplevels = appButton.toplevels;
+                if (!runningToplevels || runningToplevels.length <= 1) {
+                  wheel.accepted = false;
+                  return;
+                }
+                
+                if (dockContentRoot.wheelCooldown) {
+                  wheel.accepted = true;
+                  return;
+                }
+                
+                var dy = wheel.angleDelta.y, dx = wheel.angleDelta.x;
+                var delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
+                dockContentRoot.wheelAccumulatedDelta += delta;
+                
+                if (Math.abs(dockContentRoot.wheelAccumulatedDelta) >= 120) {
+                  var dir = dockContentRoot.wheelAccumulatedDelta > 0 ? -1 : 1;
+                  if (Settings.data.general.reverseScroll) dir *= -1;
+                  
+                  const activeIndex = appButton.focusedWindowIndex;
+                  let nextIndex = 0;
+                  if (activeIndex >= 0) {
+                    nextIndex = (activeIndex + dir + runningToplevels.length) % runningToplevels.length;
+                  } else {
+                    nextIndex = dir > 0 ? 0 : runningToplevels.length - 1;
+                  }
+                  
+                  const targetToplevel = runningToplevels[nextIndex];
+                  if (targetToplevel) {
+                     CompositorService.focusWindow({ id: targetToplevel.address || targetToplevel.id });
+                  }
+                  
+                  dockContentRoot.wheelCooldown = true;
+                  wheelDebounce.restart();
+                  dockContentRoot.wheelAccumulatedDelta = 0;
+                }
+                wheel.accepted = true;
+              }
+
               onPressed: {
                 var p1 = appButton.mapFromItem(dockContainer, 0, 0);
                 var p2 = appButton.mapFromItem(dockContainer, dockContainer.width, dockContainer.height);
@@ -765,8 +844,8 @@ Item {
                              }
 
                              if (!Settings.data.dock.groupApps || runningToplevels.length <= 1) {
-                               if (primaryToplevel && primaryToplevel.activate) {
-                                 primaryToplevel.activate();
+                               if (primaryToplevel) {
+                                 CompositorService.focusWindow({ id: primaryToplevel.address || primaryToplevel.id });
                                }
                                return;
                              }
@@ -782,8 +861,8 @@ Item {
                                const state = dockRoot.groupCycleIndices || {};
                                const nextIndex = (state[appKey] || 0) % runningToplevels.length;
                                const nextToplevel = runningToplevels[nextIndex];
-                               if (nextToplevel && nextToplevel.activate) {
-                                 nextToplevel.activate();
+                               if (nextToplevel) {
+                                 CompositorService.focusWindow({ id: nextToplevel.address || nextToplevel.id });
                                }
                                state[appKey] = (nextIndex + 1) % runningToplevels.length;
                                dockRoot.groupCycleIndices = Object.assign({}, state);
