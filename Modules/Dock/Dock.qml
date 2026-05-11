@@ -33,10 +33,13 @@ Loader {
         }
       }
 
-      // Update dock apps when window list change
+      // Update dock apps when window list or active window changes
       Connections {
         target: CompositorService
         function onWindowListChanged() {
+          updateDockApps();
+        }
+        function onActiveWindowChanged() {
           updateDockApps();
         }
       }
